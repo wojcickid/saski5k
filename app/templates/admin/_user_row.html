@@ -1,0 +1,30 @@
+<tr id="user-row-{{ user.id }}" class="border-b border-gray-100 last:border-0">
+    <td class="p-3">
+        <p class="font-medium text-gray-800">{{ user.full_name }}</p>
+        <p class="text-xs text-gray-400">{{ user.email }}</p>
+    </td>
+    <td class="p-3 font-mono text-sm text-gray-600">{{ user.parkrun_id }}</td>
+    <td class="p-3">
+        <span class="text-xs font-semibold px-3 py-1 rounded-full
+            {% if user.role == 'admin' %} bg-purple-50 text-purple-700
+            {% elif user.role == 'koordynator' %} bg-blue-50 text-blue-700
+            {% else %} bg-gray-100 text-gray-600 {% endif %}">
+            {{ labels[user.role] }}
+        </span>
+    </td>
+    <td class="p-3 text-right">
+        <form hx-post="{{ url_for('admin.change_role', user_id=user.id) }}"
+              hx-target="#user-row-{{ user.id }}" hx-swap="outerHTML"
+              class="inline-flex items-center gap-2">
+            <select name="role" class="text-sm rounded-lg border border-gray-300 px-2 py-1">
+                {% for r in roles %}
+                <option value="{{ r }}" {% if r == user.role %}selected{% endif %}>{{ labels[r] }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit"
+                    class="text-xs font-semibold bg-parkrun-green text-white px-3 py-1.5 rounded-lg hover:bg-parkrun-dark transition">
+                Zapisz
+            </button>
+        </form>
+    </td>
+</tr>

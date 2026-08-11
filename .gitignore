@@ -1,0 +1,17 @@
+venv/
+__pycache__/
+*.py[co]
+instance/
+*.db
+*.sqlite3
+.env
+.env.*
+!.env.example
+
+# Edytory / IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

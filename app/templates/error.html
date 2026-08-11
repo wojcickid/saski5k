@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="text-center py-20">
+    <p class="text-6xl font-bold text-parkrun-green mb-4">{{ code }}</p>
+    <h1 class="text-xl font-semibold mb-2">{{ title }}</h1>
+    <p class="text-gray-500 mb-6">{{ message }}</p>
+    <a href="{{ url_for('main.index') }}" class="inline-block bg-parkrun-green text-white px-4 py-2 rounded-lg hover:bg-parkrun-dark transition">Wróć na stronę główną</a>
+</div>
+{% endblock %}

@@ -1,0 +1,25 @@
+<div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; color: #1f2937;">
+    <div style="background-color: #008751; padding: 20px; border-radius: 12px 12px 0 0; text-align: center;">
+        <h1 style="color: #ffffff; margin: 0; font-size: 20px;">Zgłoszenie zatwierdzone ✅</h1>
+    </div>
+    <div style="border: 1px solid #e5e7eb; border-top: none; padding: 24px; border-radius: 0 0 12px 12px;">
+        <p>Cześć {{ user.first_name }},</p>
+        <p>Twoje zgłoszenie na wolontariat w <strong>{{ event_name }}</strong> zostało <strong style="color:#008751;">zatwierdzone</strong>.</p>
+        <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+            <tr>
+                <td style="padding: 8px 0; color: #6b7280;">Data</td>
+                <td style="padding: 8px 0; font-weight: bold;">{{ event.date.strftime('%d.%m.%Y') }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px 0; color: #6b7280;">Rola</td>
+                <td style="padding: 8px 0; font-weight: bold;">{{ role_name }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px 0; color: #6b7280;">Godzina zbiórki</td>
+                <td style="padding: 8px 0; font-weight: bold;">{{ event.meeting_time }}</td>
+            </tr>
+        </table>
+        <p>Dziękujemy za Twoje zaangażowanie! Do zobaczenia w sobotę 🏃</p>
+        <p style="color: #9ca3af; font-size: 12px; margin-top: 24px;">To automatyczna wiadomość z systemu rezerwacji wolontariuszy {{ event_name }}.</p>
+    </div>
+</div>

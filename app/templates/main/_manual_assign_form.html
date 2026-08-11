@@ -1,0 +1,67 @@
+<div id="role-row-{{ event_role.id }}" class="p-4 border-b border-gray-100 last:border-0 bg-parkrun-light/40">
+    <p class="font-medium text-gray-800 mb-1">{{ event_role.name }}</p>
+    <p class="text-xs text-gray-500 mb-3">
+        Zablokuj to miejsce dla osoby, która zgłosiła się innym kanałem niż przez ten panel
+        (np. telefonicznie, w grupie na Facebooku). Rola od razu zostanie oznaczona jako Zatwierdzona.
+    </p>
+
+    {% if error %}
+    <div class="max-w-md mb-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    <form hx-post="{{ url_for('coordinator.manual_assign', event_role_id=event_role.id) }}"
+          hx-target="#role-row-{{ event_role.id }}" hx-swap="outerHTML"
+          class="space-y-3 max-w-md">
+
+        <div class="flex gap-4 text-sm text-gray-700">
+            <label class="flex items-center gap-1.5">
+                <input type="radio" name="mode" value="existing" {% if mode != 'external' %}checked{% endif %}
+                       onchange="toggleAssignMode({{ event_role.id }}, 'existing')">
+                Zarejestrowany użytkownik
+            </label>
+            <label class="flex items-center gap-1.5">
+                <input type="radio" name="mode" value="external" {% if mode == 'external' %}checked{% endif %}
+                       onchange="toggleAssignMode({{ event_role.id }}, 'external')">
+                Osoba spoza systemu
+            </label>
+        </div>
+
+        <div id="assign-existing-{{ event_role.id }}" class="{% if mode == 'external' %}hidden{% endif %}">
+            <select name="user_id" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                <option value="">— wybierz osobę —</option>
+                {% for u in users %}
+                <option value="{{ u.id }}" {% if form.get('user_id') == u.id|string %}selected{% endif %}>{{ u.full_name }} ({{ u.email }})</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div id="assign-external-{{ event_role.id }}" class="space-y-2 {% if mode != 'external' %}hidden{% endif %}">
+            <input type="text" name="external_name" placeholder="Imię i nazwisko" value="{{ form.get('external_name', '') }}"
+                   class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+            <input type="text" name="external_parkrun_id" placeholder="Kod parkrun (opcjonalnie, np. A1234567)" value="{{ form.get('external_parkrun_id', '') }}"
+                   class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+        </div>
+
+        <div class="flex gap-2">
+            <button type="submit"
+                    class="text-xs font-semibold bg-parkrun-green text-white px-3 py-1.5 rounded-lg hover:bg-parkrun-dark transition">
+                Zablokuj rolę
+            </button>
+            <button type="button"
+                    hx-get="{{ url_for('main.role_row', event_role_id=event_role.id) }}"
+                    hx-target="#role-row-{{ event_role.id }}" hx-swap="outerHTML"
+                    class="text-xs font-semibold bg-gray-100 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-200 transition">
+                Anuluj
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+function toggleAssignMode(id, mode) {
+    document.getElementById('assign-existing-' + id).classList.toggle('hidden', mode !== 'existing');
+    document.getElementById('assign-external-' + id).classList.toggle('hidden', mode !== 'external');
+}
+</script>

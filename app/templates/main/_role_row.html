@@ -1,0 +1,92 @@
+{% set signup = event_role.active_signup %}
+<div id="role-row-{{ event_role.id }}"
+     class="grid grid-cols-1 sm:grid-cols-[1.4fr_1.4fr_auto] gap-2 sm:gap-4 items-center p-4 border-b border-gray-100 last:border-0">
+
+    <div class="font-medium text-gray-800">
+        {{ event_role.name }}
+    </div>
+
+    <div class="text-sm">
+        {% if signup and signup.status == 'Zatwierdzone' %}
+            <span class="inline-flex items-center gap-1 text-green-700 font-medium">
+                <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                {{ signup.volunteer_name }}
+            </span>
+            <span class="block text-xs text-gray-400">Zatwierdzony
+                {% if current_user.is_coordinator() and signup.volunteer_parkrun_id %} · Kod: <span class="font-mono">{{ signup.volunteer_parkrun_id }}</span>{% endif %}
+                {% if signup.is_external %} · zgłoszenie spoza panelu{% endif %}
+            </span>
+        {% elif signup and signup.status == 'Oczekujące' %}
+            <span class="inline-flex items-center gap-1 text-amber-700 font-medium">
+                <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                {{ signup.volunteer_name }}
+            </span>
+            <span class="block text-xs text-gray-400">Oczekuje na akceptację
+                {% if current_user.is_coordinator() and signup.volunteer_parkrun_id %} · Kod: <span class="font-mono">{{ signup.volunteer_parkrun_id }}</span>{% endif %}
+            </span>
+        {% else %}
+            <span class="inline-flex items-center gap-1 text-gray-400">
+                <span class="w-2 h-2 rounded-full bg-gray-300"></span>
+                Wolne miejsce
+            </span>
+        {% endif %}
+    </div>
+
+    <div class="flex items-center gap-2 justify-start sm:justify-end">
+        {% if current_user.is_coordinator() %}
+            {# --- Akcje koordynatora --- #}
+            {% if signup and signup.status == 'Oczekujące' %}
+                <button hx-post="{{ url_for('coordinator.approve_signup', signup_id=signup.id) }}"
+                        hx-target="#role-row-{{ event_role.id }}" hx-swap="outerHTML"
+                        class="text-xs font-semibold bg-parkrun-green text-white px-3 py-1.5 rounded-lg hover:bg-parkrun-dark transition">
+                    Zatwierdź
+                </button>
+                <button hx-post="{{ url_for('coordinator.reject_signup', signup_id=signup.id) }}"
+                        hx-target="#role-row-{{ event_role.id }}" hx-swap="outerHTML"
+                        hx-confirm="Odrzucić to zgłoszenie?"
+                        class="text-xs font-semibold bg-red-50 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-100 transition">
+                    Odrzuć
+                </button>
+            {% elif signup and signup.status == 'Zatwierdzone' %}
+                <button hx-post="{{ url_for('coordinator.reject_signup', signup_id=signup.id) }}"
+                        hx-target="#role-row-{{ event_role.id }}" hx-swap="outerHTML"
+                        hx-confirm="Cofnąć zatwierdzenie tego zgłoszenia?"
+                        class="text-xs font-semibold bg-red-50 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-100 transition">
+                    Cofnij
+                </button>
+            {% else %}
+                <button hx-get="{{ url_for('coordinator.manual_assign_form', event_role_id=event_role.id) }}"
+                        hx-target="#role-row-{{ event_role.id }}" hx-swap="outerHTML"
+                        class="text-xs font-semibold bg-white border border-parkrun-green text-parkrun-green px-3 py-1.5 rounded-lg hover:bg-parkrun-light transition">
+                    Przypisz ręcznie
+                </button>
+                <form method="post" action="{{ url_for('coordinator.remove_role', event_role_id=event_role.id) }}"
+                      onsubmit="return confirm('Usunąć tę rolę z zapotrzebowania na tę sobotę?');">
+                    <button type="submit"
+                            class="text-xs font-semibold text-gray-400 hover:text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-50 transition">
+                        Usuń rolę
+                    </button>
+                </form>
+            {% endif %}
+        {% elif signup and signup.status in ('Oczekujące', 'Zatwierdzone') and signup.user_id == current_user.id %}
+            {# --- Własne zgłoszenie wolontariusza --- #}
+            {% if signup.status == 'Oczekujące' %}
+            <button hx-post="{{ url_for('main.cancel_signup', signup_id=signup.id) }}"
+                    hx-target="#role-row-{{ event_role.id }}" hx-swap="outerHTML"
+                    hx-confirm="Odwołać swoje zgłoszenie?"
+                    class="text-xs font-semibold bg-gray-100 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-200 transition">
+                Odwołaj zgłoszenie
+            </button>
+            {% else %}
+            <span class="text-xs text-green-700 font-medium">To Twoja rola ✓</span>
+            {% endif %}
+        {% elif not signup and not event_role.event.is_past %}
+            {# --- Rola wolna --- #}
+            <button hx-post="{{ url_for('main.signup_role', event_role_id=event_role.id) }}"
+                    hx-target="#role-row-{{ event_role.id }}" hx-swap="outerHTML"
+                    class="text-xs font-semibold bg-parkrun-green text-white px-3 py-1.5 rounded-lg hover:bg-parkrun-dark transition">
+                Zgłoś się
+            </button>
+        {% endif %}
+    </div>
+</div>

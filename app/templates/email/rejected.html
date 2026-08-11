@@ -1,0 +1,12 @@
+<div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; color: #1f2937;">
+    <div style="background-color: #4b5563; padding: 20px; border-radius: 12px 12px 0 0; text-align: center;">
+        <h1 style="color: #ffffff; margin: 0; font-size: 20px;">Informacja o zgłoszeniu</h1>
+    </div>
+    <div style="border: 1px solid #e5e7eb; border-top: none; padding: 24px; border-radius: 0 0 12px 12px;">
+        <p>Cześć {{ user.first_name }},</p>
+        <p>Niestety tym razem nie będziesz mógł/mogła objąć roli <strong>{{ role_name }}</strong>
+           podczas wydarzenia <strong>{{ event_name }}</strong> w dniu <strong>{{ event.date.strftime('%d.%m.%Y') }}</strong>.</p>
+        <p>Zachęcamy do zgłoszenia się na inną wolną rolę w kalendarzu - wciąż liczymy na Twoją pomoc!</p>
+        <p style="color: #9ca3af; font-size: 12px; margin-top: 24px;">To automatyczna wiadomość z systemu rezerwacji wolontariuszy {{ event_name }}.</p>
+    </div>
+</div>

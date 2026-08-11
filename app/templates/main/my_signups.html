@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Moje zgłoszenia{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold text-parkrun-dark mb-6">Moje zgłoszenia</h1>
+
+{% if not signups %}
+<div class="bg-white border border-gray-100 rounded-2xl p-8 text-center text-gray-500">
+    Nie masz jeszcze żadnych zgłoszeń.
+    <br>
+    <a href="{{ url_for('main.dashboard') }}" class="text-parkrun-green font-medium hover:underline">Przejdź do kalendarza →</a>
+</div>
+{% else %}
+<div class="bg-white border border-gray-100 rounded-2xl overflow-hidden divide-y divide-gray-100">
+    {% for signup in signups %}
+    <div class="p-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+            <p class="font-medium text-gray-800">{{ signup.event_role.name }}</p>
+            <p class="text-sm text-gray-500">{{ signup.event_role.event.date | pl_date }}</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <span class="text-xs font-semibold px-3 py-1 rounded-full
+                {% if signup.status == 'Zatwierdzone' %} bg-green-50 text-green-700
+                {% elif signup.status == 'Oczekujące' %} bg-amber-50 text-amber-700
+                {% else %} bg-red-50 text-red-700 {% endif %}">
+                {{ signup.status }}
+            </span>
+            {% if signup.status == 'Oczekujące' %}
+            <form method="post" action="{{ url_for('main.cancel_signup', signup_id=signup.id) }}"
+                  onsubmit="return confirm('Odwołać to zgłoszenie?');">
+                <button type="submit"
+                        class="text-xs font-semibold bg-gray-100 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-200 transition">
+                    Odwołaj
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

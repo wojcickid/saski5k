@@ -1,0 +1,28 @@
+{# Oczekuje zmiennych: history (lista ActivityLog), history_title, history_hint (opcjonalnie), history_open (opcjonalnie, bool) #}
+<details class="bg-white border border-gray-100 rounded-2xl p-4 group" {% if history_open %}open{% endif %}>
+    <summary class="cursor-pointer select-none list-none flex items-center gap-2">
+        <span class="inline-block transition-transform group-open:rotate-90">▸</span>
+        <p class="text-sm font-semibold text-gray-700">{{ history_title }}</p>
+        <span class="text-xs text-gray-400">({{ history|length }})</span>
+    </summary>
+    <div class="mt-3">
+        {% if history_hint %}
+        <p class="text-xs text-gray-500 mb-2">{{ history_hint }}</p>
+        {% endif %}
+        <div class="divide-y divide-gray-100 max-h-96 overflow-y-auto border border-gray-100 rounded-xl">
+            {% for entry in history %}
+            <div class="px-3 py-2 text-sm">
+                <div class="flex flex-wrap items-baseline gap-x-2">
+                    <span class="font-medium text-gray-700">{{ entry.action }}</span>
+                    <span class="text-xs text-gray-400">{{ entry.created_at.strftime('%d.%m.%Y %H:%M') }} · {{ entry.actor_label }}</span>
+                </div>
+                {% if entry.details %}
+                <p class="text-xs text-gray-500 mt-0.5">{{ entry.details }}</p>
+                {% endif %}
+            </div>
+            {% else %}
+            <div class="p-6 text-center text-gray-400 text-sm">Brak zmian do wyświetlenia.</div>
+            {% endfor %}
+        </div>
+    </div>
+</details>

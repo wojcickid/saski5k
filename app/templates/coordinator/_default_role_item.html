@@ -1,0 +1,21 @@
+<div id="default-role-{{ t.id }}" class="flex items-center gap-2 py-1 px-2 rounded-lg hover:bg-gray-50">
+    <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer flex-1 select-none">
+        <input type="checkbox" {% if t.is_default %}checked{% endif %}
+               hx-post="{{ url_for('coordinator.toggle_default_role', template_id=t.id) }}"
+               hx-trigger="change" hx-target="#default-role-{{ t.id }}" hx-swap="outerHTML"
+               class="rounded border-gray-300 text-parkrun-green focus:ring-parkrun-green">
+        {{ t.name }}
+    </label>
+    <button type="button"
+            hx-get="{{ url_for('coordinator.edit_role_template_form', template_id=t.id) }}"
+            hx-target="#default-role-{{ t.id }}" hx-swap="outerHTML"
+            class="text-xs text-gray-400 hover:text-parkrun-green px-1.5 py-0.5 rounded transition">
+        Edytuj
+    </button>
+    <form method="post" action="{{ url_for('coordinator.delete_role_template', template_id=t.id) }}"
+          onsubmit="return confirm('Usunąć rolę „{{ t.name }}” ze słownika? Role już przypisane do sobót zostaną zachowane jako własne.');">
+        <button type="submit" class="text-xs text-gray-400 hover:text-red-600 px-1.5 py-0.5 rounded transition">
+            Usuń
+        </button>
+    </form>
+</div>

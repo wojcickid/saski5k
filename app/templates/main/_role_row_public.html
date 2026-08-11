@@ -1,0 +1,26 @@
+{% set signup = event_role.active_signup %}
+<div class="grid grid-cols-1 sm:grid-cols-[1.4fr_1.4fr] gap-2 sm:gap-4 items-center p-4 border-b border-gray-100 last:border-0">
+    <div class="font-medium text-gray-800">
+        {{ event_role.name }}
+    </div>
+    <div class="text-sm">
+        {% if signup and signup.status == 'Zatwierdzone' %}
+            <span class="inline-flex items-center gap-1 text-green-700 font-medium">
+                <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                {{ signup.volunteer_name }}
+            </span>
+            <span class="block text-xs text-gray-400">Zatwierdzony</span>
+        {% elif signup and signup.status == 'Oczekujące' %}
+            <span class="inline-flex items-center gap-1 text-amber-700 font-medium">
+                <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                {{ signup.volunteer_name }}
+            </span>
+            <span class="block text-xs text-gray-400">Oczekuje na akceptację</span>
+        {% else %}
+            <span class="inline-flex items-center gap-1 text-gray-400">
+                <span class="w-2 h-2 rounded-full bg-gray-300"></span>
+                Wolne miejsce
+            </span>
+        {% endif %}
+    </div>
+</div>
