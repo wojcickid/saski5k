@@ -4,8 +4,9 @@ from flask import Blueprint, render_template, redirect, url_for, flash, current_
 from flask_login import login_required, current_user
 
 from .extensions import db
-from .models import SaturdayEvent, EventRole, Signup, SignupStatus, RoleTemplate, ActivityLog
+from .models import SaturdayEvent, EventRole, Signup, SignupStatus, RoleTemplate, ActivityLog, User
 from .activity_log import log_activity
+from .auth import PARKRUN_ID_RE
 
 main_bp = Blueprint("main", __name__)
 
@@ -14,11 +15,17 @@ HISTORY_LIMIT = 50
 
 @main_bp.route("/")
 def index():
-    if current_user.is_authenticated:
-        return redirect(url_for("main.dashboard"))
+    """Strona główna: rozdzielacz nawigacyjny (hub), ten sam dla gościa i
+    zalogowanego - tylko dostępne karty się różnią. Docelowo, gdy dojdzie coś
+    poza samym systemem rezerwacji ról, tu będą kolejne karty."""
+    return render_template("main/home.html")
 
-    # Niezalogowani widzą publiczny, tylko-do-odczytu podgląd kalendarza
-    # (kto jest zgłoszony, jakie miejsca wolne) zamiast od razu ekranu logowania.
+
+@main_bp.route("/calendar")
+def calendar():
+    """Kalendarz nadchodzących sobót - jeden URL dla wszystkich. Niezalogowani
+    widzą publiczny, tylko-do-odczytu podgląd (kto zgłoszony, co wolne);
+    zalogowani widzą tę samą listę z linkami do zgłaszania się."""
     count = current_app.config["UPCOMING_SATURDAYS_COUNT"]
     today = date.today()
     events = (
@@ -27,7 +34,14 @@ def index():
         .limit(count)
         .all()
     )
-    return render_template("main/public_calendar.html", events=events)
+    return render_template("main/calendar.html", events=events)
+
+
+@main_bp.route("/dashboard")
+def dashboard_redirect():
+    """Stary URL sprzed przeniesienia kalendarza pod /calendar - przekierowanie
+    dla wygody (zakładki, przyzwyczajenie)."""
+    return redirect(url_for("main.calendar"), code=301)
 
 
 @main_bp.route("/publiczny/sobota/<int:event_id>")
@@ -49,20 +63,6 @@ def public_saturday_detail(event_id):
     return render_template(
         "main/public_saturday_detail.html", event=event, prev_event=prev_event, next_event=next_event
     )
-
-
-@main_bp.route("/dashboard")
-@login_required
-def dashboard():
-    count = current_app.config["UPCOMING_SATURDAYS_COUNT"]
-    today = date.today()
-    events = (
-        SaturdayEvent.query.filter(SaturdayEvent.date >= today)
-        .order_by(SaturdayEvent.date)
-        .limit(count)
-        .all()
-    )
-    return render_template("main/dashboard.html", events=events)
 
 
 @main_bp.route("/sobota/<int:event_id>")
@@ -121,7 +121,7 @@ def role_row(event_role_id):
 @login_required
 def signup_role(event_role_id):
     event_role = EventRole.query.get_or_404(event_role_id)
-    if event_role.event.is_past:
+    if event_role.event.is_past or event_role.event.is_cancelled:
         abort(400)
 
     if event_role.active_signup is not None:
@@ -167,3 +167,64 @@ def my_signups():
         .all()
     )
     return render_template("main/my_signups.html", signups=signups)
+
+
+@main_bp.route("/profil", methods=["GET", "POST"])
+@login_required
+def profile():
+    if request.method == "POST":
+        form_type = request.form.get("form_type")
+
+        if form_type == "profile":
+            first_name = request.form.get("first_name", "").strip()
+            last_name = request.form.get("last_name", "").strip()
+            email = request.form.get("email", "").strip().lower()
+            parkrun_id = request.form.get("parkrun_id", "").strip().upper()
+
+            errors = []
+            if not first_name or not last_name:
+                errors.append("Podaj imię i nazwisko.")
+            if not email or "@" not in email:
+                errors.append("Podaj poprawny adres e-mail.")
+            if not PARKRUN_ID_RE.match(parkrun_id):
+                errors.append("Kod Uczestnika parkrun musi mieć format np. A1234567 (litera A + 6-8 cyfr).")
+            if email and User.query.filter(User.email == email, User.id != current_user.id).first():
+                errors.append("Ten adres e-mail jest już używany przez inne konto.")
+
+            if errors:
+                for e in errors:
+                    flash(e, "error")
+            else:
+                current_user.first_name = first_name
+                current_user.last_name = last_name
+                current_user.email = email
+                current_user.parkrun_id = parkrun_id
+                db.session.commit()
+                flash("Dane profilu zostały zaktualizowane.", "success")
+            return redirect(url_for("main.profile"))
+
+        elif form_type == "password":
+            current_password = request.form.get("current_password", "")
+            new_password = request.form.get("new_password", "")
+            new_password2 = request.form.get("new_password2", "")
+
+            errors = []
+            if not current_user.check_password(current_password):
+                errors.append("Obecne hasło jest nieprawidłowe.")
+            if len(new_password) < 6:
+                errors.append("Nowe hasło musi mieć minimum 6 znaków.")
+            if new_password != new_password2:
+                errors.append("Nowe hasła nie są identyczne.")
+
+            if errors:
+                for e in errors:
+                    flash(e, "error")
+            else:
+                current_user.set_password(new_password)
+                db.session.commit()
+                flash("Hasło zostało zmienione.", "success")
+            return redirect(url_for("main.profile"))
+
+        abort(400)
+
+    return render_template("main/profile.html")

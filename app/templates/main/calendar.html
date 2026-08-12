@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Kalendarz{% endblock %}
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-parkrun-dark">Nadchodzące soboty</h1>
+    {% if current_user.is_authenticated %}
+    <p class="text-gray-500 text-sm">Wybierz sobotę, aby zobaczyć role wolontariackie i się zgłosić.</p>
+    {% else %}
+    <p class="text-gray-500 text-sm">
+        Kto jest zgłoszony i jakie miejsca są wolne. Aby się zgłosić,
+        <a href="{{ url_for('auth.login') }}" class="text-parkrun-green font-medium hover:underline">zaloguj się</a>
+        lub <a href="{{ url_for('auth.register') }}" class="text-parkrun-green font-medium hover:underline">załóż konto</a>.
+    </p>
+    {% endif %}
+</div>
+
+{% if not events %}
+<div class="bg-white border border-gray-100 rounded-2xl p-8 text-center text-gray-500">
+    Brak zaplanowanych sobót.
+    {% if current_user.is_authenticated and current_user.is_coordinator() %}
+    <br>
+    <a href="{{ url_for('coordinator.panel') }}" class="text-parkrun-green font-medium hover:underline">Dodaj sobotę w panelu koordynatora →</a>
+    {% endif %}
+</div>
+{% else %}
+<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    {% for event in events %}
+    {% set detail_url = url_for('main.saturday_detail', event_id=event.id) if current_user.is_authenticated else url_for('main.public_saturday_detail', event_id=event.id) %}
+    <a href="{{ detail_url }}"
+       class="block bg-white border rounded-2xl p-5 shadow-sm hover:shadow-md transition
+           {% if event.is_cancelled %} border-red-200 hover:border-red-300 {% else %} border-gray-100 hover:border-parkrun-green/40 {% endif %}">
+        <p class="text-xs font-semibold uppercase tracking-wide {% if event.is_cancelled %}text-red-600{% else %}text-parkrun-green{% endif %}">
+            {% if event.is_cancelled %}❌ Edycja odwołana{% elif event.is_special %}⭐ Edycja specjalna{% else %}{{ event.date | pl_weekday | capitalize }}{% endif %}
+        </p>
+        {% if event.is_special and event.label %}
+        <p class="text-sm font-semibold text-gray-800 mt-1">{{ event.label }}</p>
+        {% endif %}
+        <p class="text-lg font-bold text-gray-800 {% if not (event.is_special and event.label) %}mt-1{% endif %} {% if event.is_cancelled %}line-through decoration-red-300{% endif %}">{{ event.date | pl_date }}</p>
+        <p class="text-sm text-gray-500 mb-3">Zbiórka {{ event.meeting_time }} · Start {{ event.run_time }}</p>
+        {% if not event.is_cancelled %}
+        <div class="flex gap-2 flex-wrap text-xs font-medium">
+            <span class="px-2 py-1 rounded-full bg-green-50 text-green-700">{{ event.approved_count }} obsadzone</span>
+            <span class="px-2 py-1 rounded-full bg-amber-50 text-amber-700">{{ event.pending_count }} oczekujące</span>
+            <span class="px-2 py-1 rounded-full bg-gray-100 text-gray-600">{{ event.free_count }} wolne</span>
+        </div>
+        {% endif %}
+    </a>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

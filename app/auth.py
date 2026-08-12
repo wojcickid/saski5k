@@ -14,7 +14,7 @@ PARKRUN_ID_RE = re.compile(r"^A\d{6,8}$")
 @auth_bp.route("/rejestracja", methods=["GET", "POST"])
 def register():
     if current_user.is_authenticated:
-        return redirect(url_for("main.dashboard"))
+        return redirect(url_for("main.index"))
 
     if request.method == "POST":
         first_name = request.form.get("first_name", "").strip()
@@ -57,7 +57,7 @@ def register():
         db.session.commit()
         login_user(user)
         flash(f"Witaj, {user.first_name}! Twoje konto zostało utworzone.", "success")
-        return redirect(url_for("main.dashboard"))
+        return redirect(url_for("main.index"))
 
     return render_template("auth/register.html", form={})
 
@@ -65,17 +65,20 @@ def register():
 @auth_bp.route("/logowanie", methods=["GET", "POST"])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for("main.dashboard"))
+        return redirect(url_for("main.index"))
 
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
         user = User.query.filter_by(email=email).first()
         if user and user.check_password(password):
+            if not user.is_active:
+                flash("To konto zostało zablokowane. Skontaktuj się z administratorem.", "error")
+                return render_template("auth/login.html"), 403
             login_user(user)
             flash(f"Witaj ponownie, {user.first_name}!", "success")
             next_url = request.args.get("next")
-            return redirect(next_url or url_for("main.dashboard"))
+            return redirect(next_url or url_for("main.index"))
         flash("Nieprawidłowy e-mail lub hasło.", "error")
         return render_template("auth/login.html"), 401
 

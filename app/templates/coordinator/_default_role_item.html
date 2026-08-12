@@ -5,6 +5,9 @@
                hx-trigger="change" hx-target="#default-role-{{ t.id }}" hx-swap="outerHTML"
                class="rounded border-gray-300 text-parkrun-green focus:ring-parkrun-green">
         {{ t.name }}
+        {% if t.default_slots > 1 %}
+        <span class="text-xs font-semibold text-parkrun-green bg-parkrun-light rounded-full px-1.5 py-0.5">×{{ t.default_slots }}</span>
+        {% endif %}
     </label>
     <button type="button"
             hx-get="{{ url_for('coordinator.edit_role_template_form', template_id=t.id) }}"

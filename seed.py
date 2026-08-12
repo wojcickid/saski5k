@@ -1,8 +1,10 @@
 """Skrypt seedujący bazę danych: domyślne role oraz konta demonstracyjne.
 
-Uruchomienie:  python seed.py
-- Tworzy tabele (jeśli nie istnieją) i domyślny słownik ról (dzieje się to też
-  automatycznie przy starcie aplikacji - patrz app/__init__.py).
+Uruchomienie:  flask db upgrade && python seed.py
+- Zakłada, że schemat bazy jest już utworzony przez migracje (`flask db upgrade`) -
+  ten skrypt NIE tworzy tabel, tylko wypełnia je danymi.
+- Seeduje domyślny słownik ról (dzieje się to też automatycznie przy starcie
+  aplikacji - patrz app/__init__.py).
 - Dodatkowo tworzy konta demo (admin / koordynator / wolontariusz) oraz
   kilka nadchodzących sobót z wygenerowanymi rolami, żeby MVP dało się od
   razu przeklikać.
@@ -13,6 +15,8 @@ from datetime import date, timedelta
 from dotenv import load_dotenv
 
 load_dotenv()
+
+from sqlalchemy.exc import OperationalError
 
 from app import create_app
 from app.extensions import db
@@ -55,8 +59,15 @@ def next_saturday(from_date):
 def main():
     app = create_app()
     with app.app_context():
-        db.create_all()
-        seed_role_templates(db)
+        try:
+            seed_role_templates(db)
+        except OperationalError:
+            print(
+                "Baza danych nie jest jeszcze zmigrowana (brak tabel).\n"
+                "Uruchom najpierw:  flask db upgrade\n"
+                "...a dopiero potem ponownie:  python seed.py"
+            )
+            return
 
         print("== Konta demonstracyjne ==")
         for data in DEMO_USERS:

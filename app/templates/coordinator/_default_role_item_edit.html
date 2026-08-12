@@ -1,27 +1,43 @@
-<div id="default-role-{{ t.id }}" class="p-2 rounded-lg bg-parkrun-light/40">
+<div id="default-role-{{ t.id }}" class="p-3 rounded-lg bg-parkrun-light/40 border border-parkrun-green/20">
     {% if error %}
-    <p class="text-xs text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1 mb-1.5">{{ error }}</p>
+    <p class="text-xs text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1.5 mb-2">{{ error }}</p>
     {% endif %}
     <form hx-post="{{ url_for('coordinator.edit_role_template', template_id=t.id) }}"
           hx-target="#default-role-{{ t.id }}" hx-swap="outerHTML"
-          class="flex flex-col sm:flex-row gap-1.5">
-        <input type="text" name="name" value="{{ t.name }}" required
-               class="flex-1 rounded-lg border border-gray-300 px-2 py-1 text-sm">
-        <select name="category" class="rounded-lg border border-gray-300 px-2 py-1 text-sm">
-            <option value="core" {% if t.category == 'core' %}selected{% endif %}>Obowiązkowa</option>
-            <option value="support" {% if t.category == 'support' %}selected{% endif %}>Dodatkowa</option>
-        </select>
-        <input type="text" name="description" value="{{ t.description or '' }}" placeholder="opis (opcjonalnie)"
-               class="flex-1 rounded-lg border border-gray-300 px-2 py-1 text-sm">
-        <div class="flex gap-1.5">
+          class="space-y-2">
+        <div>
+            <label class="block text-xs text-gray-500 mb-0.5">Nazwa roli</label>
+            <input type="text" name="name" value="{{ t.name }}" required
+                   class="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+            <div>
+                <label class="block text-xs text-gray-500 mb-0.5">Kategoria</label>
+                <select name="category" class="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm">
+                    <option value="core" {% if t.category == 'core' %}selected{% endif %}>Obowiązkowa</option>
+                    <option value="support" {% if t.category == 'support' %}selected{% endif %}>Dodatkowa</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-0.5">Miejsc domyślnie na sobotę</label>
+                <input type="number" name="default_slots" value="{{ t.default_slots }}" min="1" max="20" required
+                       class="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm">
+            </div>
+        </div>
+        <div>
+            <label class="block text-xs text-gray-500 mb-0.5">Opis (opcjonalnie)</label>
+            <input type="text" name="description" value="{{ t.description or '' }}"
+                   class="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm">
+        </div>
+        <div class="flex gap-2 pt-1">
             <button type="submit"
-                    class="text-xs font-semibold bg-parkrun-green text-white px-2.5 py-1 rounded-lg hover:bg-parkrun-dark transition whitespace-nowrap">
+                    class="text-xs font-semibold bg-parkrun-green text-white px-3 py-1.5 rounded-lg hover:bg-parkrun-dark transition">
                 Zapisz
             </button>
             <button type="button"
                     hx-get="{{ url_for('coordinator.role_template_item', template_id=t.id) }}"
                     hx-target="#default-role-{{ t.id }}" hx-swap="outerHTML"
-                    class="text-xs font-semibold bg-gray-100 text-gray-600 px-2.5 py-1 rounded-lg hover:bg-gray-200 transition">
+                    class="text-xs font-semibold bg-gray-100 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-200 transition">
                 Anuluj
             </button>
         </div>

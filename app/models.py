@@ -43,9 +43,21 @@ class User(UserMixin, db.Model):
     parkrun_id = db.Column(db.String(10), nullable=False)
     role = db.Column(db.String(20), nullable=False, default=Role.VOLUNTEER)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # Nazwa kolumny/atrybutu zgodna z Flask-Login: UserMixin.is_active domyślnie
+    # zwraca zawsze True, ale zdefiniowanie własnej kolumny o tej samej nazwie
+    # nadpisuje tamtą właściwość - zablokowane konto (is_active=False) nie może
+    # się zalogować (patrz auth.login) i zostaje wylogowane przy najbliższym
+    # żądaniu, jeśli akurat miało aktywną sesję (patrz load_user w app/__init__.py).
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
 
+    # UWAGA: celowo bez "delete"/"delete-orphan". Signup.user_id jest nullable
+    # właśnie po to, żeby admin.delete_user mógł "odłączyć" zgłoszenia od
+    # kasowanego konta (przenosząc dane do external_name/external_parkrun_id)
+    # zamiast tracić historię obsady sobót. Z cascade delete-orphan
+    # przypisanie signup.user = None byłoby (błędnie) interpretowane jako
+    # osierocenie i SQLAlchemy skasowałoby ten wiersz razem z użytkownikiem.
     signups = db.relationship(
-        "Signup", back_populates="user", cascade="all, delete-orphan"
+        "Signup", back_populates="user", cascade="save-update, merge"
     )
 
     def set_password(self, password):
@@ -81,6 +93,10 @@ class RoleTemplate(db.Model):
     # Czy ta rola ma być automatycznie dodawana przy tworzeniu nowej soboty.
     # Koordynator zarządza tym w panelu "Domyślny zestaw ról na nowe soboty".
     is_default = db.Column(db.Boolean, default=True, nullable=False)
+    # Ile niezależnych slotów (EventRole) tej roli tworzyć domyślnie na sobotę -
+    # niektóre role (Pacemaker, Parkwalker, Marshal) potrzebują kilku osób
+    # jednocześnie, więc nie zawsze "1 rola = 1 wolontariusz".
+    default_slots = db.Column(db.Integer, default=1, nullable=False)
 
     def __repr__(self):
         return f"<RoleTemplate {self.name}>"
@@ -101,6 +117,12 @@ class SaturdayEvent(db.Model):
     # nazwa własna wyświetlana zamiast/obok dnia tygodnia, np. "Bieg Noworoczny".
     is_special = db.Column(db.Boolean, default=False, nullable=False)
     label = db.Column(db.String(120), nullable=True)
+    # Odwołana edycja (np. z powodu pogody, imprezy miejskiej itp.) - blokuje
+    # nowe zgłoszenia, ale NIE kasuje wydarzenia ani jego historii (zachowuje
+    # się jak reszta aplikacji: nic nie znika, tylko przestaje przyjmować nowe
+    # rezerwacje). `cancel_reason` jest opcjonalny.
+    is_cancelled = db.Column(db.Boolean, default=False, nullable=False)
+    cancel_reason = db.Column(db.String(255), nullable=True)
 
     event_roles = db.relationship(
         "EventRole",

@@ -3,7 +3,7 @@ import os
 from flask import Flask
 
 from .config import Config
-from .extensions import db, login_manager, mail
+from .extensions import db, login_manager, mail, migrate
 
 
 def create_app(config_class=Config):
@@ -14,6 +14,7 @@ def create_app(config_class=Config):
 
     # --- Rozszerzenia ---
     db.init_app(app)
+    migrate.init_app(app, db)
     login_manager.init_app(app)
     login_manager.login_view = "auth.login"
     login_manager.login_message = "Zaloguj się, aby kontynuować."
@@ -24,7 +25,13 @@ def create_app(config_class=Config):
 
     @login_manager.user_loader
     def load_user(user_id):
-        return User.query.get(int(user_id))
+        user = User.query.get(int(user_id))
+        if user and not user.is_active:
+            # Konto zablokowane przez admina po zalogowaniu - wyloguj przy
+            # najbliższym żądaniu (zwrócenie None każe Flask-Loginowi
+            # potraktować sesję jako niezalogowaną).
+            return None
+        return user
 
     # --- Blueprinty ---
     from .auth import auth_bp
@@ -76,12 +83,23 @@ def create_app(config_class=Config):
     def not_found(e):
         return _render_error(app, 404, "Nie znaleziono", "Szukana strona nie istnieje.")
 
-    # --- Inicjalizacja bazy danych + seed domyślnych ról ---
+    # --- Seed domyślnych ról ---
+    # Schemat bazy jest teraz zarządzany przez Flask-Migrate/Alembic (katalog
+    # migrations/), NIE przez db.create_all() - patrz sekcja "Baza danych /
+    # migracje" w README. Tabele muszą już istnieć (`flask db upgrade`),
+    # inaczej poniższe zapytanie się nie powiedzie - łapiemy to i tylko
+    # ostrzegamy w logu, żeby dev-serwer nie wywalał się nieczytelnym tracebackiem.
     with app.app_context():
-        db.create_all()
+        from sqlalchemy.exc import OperationalError
         from .seed_data import seed_role_templates
 
-        seed_role_templates(db)
+        try:
+            seed_role_templates(db)
+        except OperationalError:
+            app.logger.warning(
+                "Baza danych nie jest jeszcze zmigrowana (brak tabel). "
+                "Uruchom `flask db upgrade`, a potem zrestartuj aplikację."
+            )
 
     return app
 

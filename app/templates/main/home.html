@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Strona główna{% endblock %}
+{% block content %}
+
+<div class="mb-8 text-center sm:text-left">
+    <p class="text-xs font-semibold text-parkrun-green uppercase tracking-wide mb-1">{{ event_name }}</p>
+    <h1 class="text-2xl font-bold text-gray-800">Wolontariat parkrun</h1>
+    {% if current_user.is_authenticated %}
+    <p class="text-gray-500 text-sm mt-1">Witaj, {{ current_user.first_name }}! Wybierz, co chcesz zrobić.</p>
+    {% else %}
+    <p class="text-gray-500 text-sm mt-1">Zapisz się na rolę wolontariacką albo po prostu sprawdź, kto już jest zgłoszony.</p>
+    {% endif %}
+</div>
+
+<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <a href="{{ url_for('main.calendar') }}"
+       class="block bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-parkrun-green/40 transition">
+        <p class="text-2xl mb-2">📅</p>
+        <p class="font-semibold text-gray-800">Kalendarz</p>
+        <p class="text-sm text-gray-500 mt-1">Nadchodzące soboty - kto się zgłosił i jakie role są wolne.</p>
+    </a>
+
+    {% if current_user.is_authenticated %}
+    <a href="{{ url_for('main.my_signups') }}"
+       class="block bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-parkrun-green/40 transition">
+        <p class="text-2xl mb-2">📋</p>
+        <p class="font-semibold text-gray-800">Moje zgłoszenia</p>
+        <p class="text-sm text-gray-500 mt-1">Historia i status Twoich zgłoszeń na role.</p>
+    </a>
+
+    <a href="{{ url_for('main.profile') }}"
+       class="block bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-parkrun-green/40 transition">
+        <p class="text-2xl mb-2">👤</p>
+        <p class="font-semibold text-gray-800">Profil</p>
+        <p class="text-sm text-gray-500 mt-1">Twoje dane, kod parkrun i hasło.</p>
+    </a>
+
+    {% if current_user.is_coordinator() %}
+    <a href="{{ url_for('coordinator.panel') }}"
+       class="block bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-parkrun-green/40 transition">
+        <p class="text-2xl mb-2">🛠️</p>
+        <p class="font-semibold text-gray-800">Panel koordynatora</p>
+        <p class="text-sm text-gray-500 mt-1">Soboty, słownik ról, zgłoszenia, historia zmian.</p>
+    </a>
+    {% endif %}
+
+    {% if current_user.is_admin() %}
+    <a href="{{ url_for('admin.users') }}"
+       class="block bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-parkrun-green/40 transition">
+        <p class="text-2xl mb-2">👥</p>
+        <p class="font-semibold text-gray-800">Użytkownicy</p>
+        <p class="text-sm text-gray-500 mt-1">Role, blokowanie i usuwanie kont.</p>
+    </a>
+    {% endif %}
+
+    {% else %}
+    <a href="{{ url_for('auth.login') }}"
+       class="block bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-parkrun-green/40 transition">
+        <p class="text-2xl mb-2">🔑</p>
+        <p class="font-semibold text-gray-800">Zaloguj się</p>
+        <p class="text-sm text-gray-500 mt-1">Masz już konto? Zaloguj się, żeby zgłosić się na rolę.</p>
+    </a>
+
+    <a href="{{ url_for('auth.register') }}"
+       class="block bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-parkrun-green/40 transition">
+        <p class="text-2xl mb-2">✍️</p>
+        <p class="font-semibold text-gray-800">Załóż konto</p>
+        <p class="text-sm text-gray-500 mt-1">Potrzebny będzie Twój Kod Uczestnika parkrun.</p>
+    </a>
+    {% endif %}
+</div>
+{% endblock %}

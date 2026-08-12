@@ -4,7 +4,7 @@
 
 <div class="mb-6 flex flex-wrap items-start justify-between gap-3">
     <div>
-        <a href="{{ url_for('main.dashboard') }}" class="text-sm text-parkrun-green hover:underline">&larr; Kalendarz</a>
+        <a href="{{ url_for('main.calendar') }}" class="text-sm text-parkrun-green hover:underline">&larr; Kalendarz</a>
         {% if event.is_special %}
         <p class="text-xs font-semibold text-parkrun-green uppercase tracking-wide mt-1">
             ⭐ Edycja specjalna · {{ event.date | pl_weekday | capitalize }}
@@ -48,12 +48,45 @@
     {% endif %}
 </div>
 
-{% if current_user.is_coordinator() %}
+{% if event.is_cancelled %}
+<div class="bg-red-50 border border-red-200 rounded-2xl p-4 mb-6 flex flex-wrap items-center justify-between gap-3">
+    <div>
+        <p class="text-sm font-semibold text-red-700">⚠️ Ta edycja została odwołana{% if event.cancel_reason %}: {{ event.cancel_reason }}{% endif %}</p>
+        <p class="text-xs text-red-600">Nowe zgłoszenia są zablokowane. Widzą to też niezalogowani goście.</p>
+    </div>
+    {% if current_user.is_coordinator() %}
+    <form method="post" action="{{ url_for('coordinator.restore_saturday', event_id=event.id) }}">
+        <button type="submit"
+                class="text-xs font-semibold bg-white border border-red-300 text-red-700 px-3 py-1.5 rounded-lg hover:bg-red-100 transition">
+            Przywróć edycję
+        </button>
+    </form>
+    {% endif %}
+</div>
+{% elif current_user.is_coordinator() %}
+<details class="mb-6 group">
+    <summary class="cursor-pointer select-none list-none inline-flex items-center gap-1 text-xs text-gray-400 hover:text-red-600 transition">
+        <span class="inline-block transition-transform group-open:rotate-90">▸</span> Odwołaj tę edycję
+    </summary>
+    <form method="post" action="{{ url_for('coordinator.cancel_saturday', event_id=event.id) }}"
+          onsubmit="return confirm('Odwołać tę edycję? Zablokuje to nowe zgłoszenia (można to później cofnąć).');"
+          class="mt-2 flex flex-wrap gap-2">
+        <input type="text" name="reason" placeholder="powód (opcjonalnie, np. zła pogoda)"
+               class="flex-1 min-w-[10rem] rounded-lg border border-gray-300 px-3 py-1.5 text-sm">
+        <button type="submit"
+                class="text-xs font-semibold bg-red-50 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-100 transition whitespace-nowrap">
+            Odwołaj edycję
+        </button>
+    </form>
+</details>
+{% endif %}
+
+{% if current_user.is_coordinator() and not event.is_cancelled %}
 <div class="bg-white border border-gray-100 rounded-2xl p-4 mb-4">
     <p class="text-sm font-semibold text-gray-700 mb-2">Dodaj rolę do zapotrzebowania na tę sobotę</p>
     <form method="post" action="{{ url_for('coordinator.add_role', event_id=event.id) }}"
-          class="flex flex-col sm:flex-row gap-2">
-        <select name="role_template_id" class="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm">
+          class="flex flex-col sm:flex-row sm:flex-wrap gap-2">
+        <select name="role_template_id" class="flex-1 min-w-[10rem] rounded-lg border border-gray-300 px-3 py-2 text-sm">
             <option value="">— wybierz rolę z listy —</option>
             {% for t in role_templates %}
             <option value="{{ t.id }}">{{ t.name }}</option>
@@ -61,12 +94,15 @@
         </select>
         <span class="text-gray-400 text-sm self-center">lub</span>
         <input type="text" name="custom_name" placeholder="własna nazwa roli"
-               class="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm">
+               class="flex-1 min-w-[10rem] rounded-lg border border-gray-300 px-3 py-2 text-sm">
+        <input type="number" name="quantity" value="1" min="1" max="20" title="Ile miejsc dodać naraz (np. kilku Parkwalkerów)"
+               class="w-20 rounded-lg border border-gray-300 px-3 py-2 text-sm">
         <button type="submit"
                 class="text-sm font-semibold bg-parkrun-green text-white px-4 py-2 rounded-lg hover:bg-parkrun-dark transition whitespace-nowrap">
             + Dodaj rolę
         </button>
     </form>
+    <p class="text-xs text-gray-400 mt-1">Pole liczbowe = ile niezależnych miejsc tej roli dodać na tę sobotę (np. 2, jeśli potrzeba dwóch Parkwalkerów).</p>
 </div>
 {% endif %}
 

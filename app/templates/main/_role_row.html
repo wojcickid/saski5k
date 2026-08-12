@@ -55,11 +55,13 @@
                     Cofnij
                 </button>
             {% else %}
+                {% if not event_role.event.is_cancelled %}
                 <button hx-get="{{ url_for('coordinator.manual_assign_form', event_role_id=event_role.id) }}"
                         hx-target="#role-row-{{ event_role.id }}" hx-swap="outerHTML"
                         class="text-xs font-semibold bg-white border border-parkrun-green text-parkrun-green px-3 py-1.5 rounded-lg hover:bg-parkrun-light transition">
                     Przypisz ręcznie
                 </button>
+                {% endif %}
                 <form method="post" action="{{ url_for('coordinator.remove_role', event_role_id=event_role.id) }}"
                       onsubmit="return confirm('Usunąć tę rolę z zapotrzebowania na tę sobotę?');">
                     <button type="submit"
@@ -80,6 +82,8 @@
             {% else %}
             <span class="text-xs text-green-700 font-medium">To Twoja rola ✓</span>
             {% endif %}
+        {% elif not signup and event_role.event.is_cancelled %}
+            <span class="text-xs text-red-400 font-medium">Edycja odwołana</span>
         {% elif not signup and not event_role.event.is_past %}
             {# --- Rola wolna --- #}
             <button hx-post="{{ url_for('main.signup_role', event_role_id=event_role.id) }}"

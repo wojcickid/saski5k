@@ -67,6 +67,15 @@ def toggle_default_role(template_id):
     return render_template("coordinator/_default_role_item.html", t=t)
 
 
+def _parse_slots(raw, default=1):
+    """Parsuje liczbę slotów z formularza, z bezpiecznym fallbackiem 1-20."""
+    try:
+        n = int(raw)
+    except (TypeError, ValueError):
+        return default
+    return max(1, min(n, 20))
+
+
 @coordinator_bp.route("/role-domyslne/dodaj", methods=["POST"])
 @coordinator_required
 def add_role_template():
@@ -74,6 +83,7 @@ def add_role_template():
     name = request.form.get("name", "").strip()
     category = request.form.get("category", "support")
     description = request.form.get("description", "").strip() or None
+    default_slots = _parse_slots(request.form.get("default_slots"))
 
     if not name:
         flash("Podaj nazwę roli.", "error")
@@ -85,7 +95,10 @@ def add_role_template():
         return redirect(url_for("coordinator.panel"))
 
     max_sort = db.session.query(db.func.max(RoleTemplate.sort_order)).scalar() or 0
-    t = RoleTemplate(name=name, category=category, description=description, sort_order=max_sort + 1)
+    t = RoleTemplate(
+        name=name, category=category, description=description,
+        sort_order=max_sort + 1, default_slots=default_slots,
+    )
     db.session.add(t)
     log_activity("Dodano rolę do słownika", details=name)
     db.session.commit()
@@ -116,6 +129,7 @@ def edit_role_template(template_id):
     name = request.form.get("name", "").strip()
     category = request.form.get("category", t.category)
     description = request.form.get("description", "").strip() or None
+    default_slots = _parse_slots(request.form.get("default_slots"), default=t.default_slots)
 
     if not name:
         return render_template("coordinator/_default_role_item_edit.html", t=t, error="Podaj nazwę roli.")
@@ -128,7 +142,7 @@ def edit_role_template(template_id):
         )
 
     old_name = t.name
-    t.name, t.category, t.description = name, category, description
+    t.name, t.category, t.description, t.default_slots = name, category, description, default_slots
     # EventRole trzyma własną kopię nazwy (snapshot) - aktualizujemy ją tylko
     # tam, gdzie jeszcze nie ma zgłoszenia, żeby nie zmieniać historycznych zapisów.
     for er in EventRole.query.filter_by(role_template_id=t.id).all():
@@ -161,32 +175,43 @@ def delete_role_template(template_id):
 @coordinator_required
 def apply_default_roles_to_upcoming():
     """Synchronizuje zapotrzebowanie na role we wszystkich nadchodzących
-    (jeszcze nieodbytych) sobotach z aktualnie zaznaczonym domyślnym zestawem:
-    dodaje brakujące domyślne role i usuwa odznaczone - o ile nie mają
-    aktywnego zgłoszenia (te są pomijane, żeby nie gubić danych)."""
-    default_ids = {t.id for t in RoleTemplate.query.filter_by(is_default=True).all()}
+    (jeszcze nieodbytych) sobotach z aktualnie zaznaczonym domyślnym zestawem
+    (uwzględniając liczbę slotów na rolę - RoleTemplate.default_slots): dodaje
+    brakujące sloty i usuwa nadwyżkę odznaczonych/zmniejszonych ról - o ile nie
+    mają aktywnego zgłoszenia (te są pomijane, żeby nie gubić danych)."""
+    default_slots_by_template = {t.id: t.default_slots for t in RoleTemplate.query.filter_by(is_default=True).all()}
     all_template_ids = {t.id for t in RoleTemplate.query.all()}
 
     added, removed, skipped = 0, 0, 0
-    upcoming = SaturdayEvent.query.filter(SaturdayEvent.date >= date.today()).all()
+    # Odwołane edycje pomijamy - nie ma sensu zarządzać zapotrzebowaniem na role,
+    # skoro i tak nie przyjmują nowych zgłoszeń.
+    upcoming = SaturdayEvent.query.filter(
+        SaturdayEvent.date >= date.today(), SaturdayEvent.is_cancelled == False  # noqa: E712
+    ).all()
 
     for event in upcoming:
-        existing_by_template = {
-            er.role_template_id: er for er in event.event_roles if er.role_template_id in all_template_ids
-        }
+        existing_by_template = {}
+        for er in event.event_roles:
+            if er.role_template_id in all_template_ids:
+                existing_by_template.setdefault(er.role_template_id, []).append(er)
 
-        for tid in default_ids - existing_by_template.keys():
-            t = RoleTemplate.query.get(tid)
-            db.session.add(EventRole(event_id=event.id, role_template_id=t.id, name=t.name))
-            added += 1
+        relevant_ids = set(default_slots_by_template) | set(existing_by_template)
+        for tid in relevant_ids:
+            target = default_slots_by_template.get(tid, 0)  # 0 = rola odznaczona z domyślnych
+            current = existing_by_template.get(tid, [])
 
-        for tid in existing_by_template.keys() - default_ids:
-            er = existing_by_template[tid]
-            if er.active_signup is None:
-                db.session.delete(er)
-                removed += 1
-            else:
-                skipped += 1
+            if len(current) < target:
+                t = RoleTemplate.query.get(tid)
+                for _ in range(target - len(current)):
+                    db.session.add(EventRole(event_id=event.id, role_template_id=t.id, name=t.name))
+                    added += 1
+            elif len(current) > target:
+                free_slots = [er for er in current if er.active_signup is None]
+                to_remove = len(current) - target
+                for er in free_slots[:to_remove]:
+                    db.session.delete(er)
+                    removed += 1
+                skipped += max(0, to_remove - len(free_slots))
 
     message = f"Zsynchronizowano {len(upcoming)} nadchodzących sobót: dodano {added}, usunięto {removed} wolnych ról."
     if skipped:
@@ -269,12 +294,52 @@ def delete_saturday(event_id):
     return redirect(url_for("coordinator.panel"))
 
 
+@coordinator_bp.route("/soboty/<int:event_id>/odwolaj", methods=["POST"])
+@coordinator_required
+def cancel_saturday(event_id):
+    """Oznacza edycję jako odwołaną (np. edycja odwołana z powodu pogody) -
+    blokuje nowe zgłoszenia, ale niczego nie usuwa. Odwrotność: restore_saturday."""
+    event = SaturdayEvent.query.get_or_404(event_id)
+
+    if event.is_cancelled:
+        flash("Ta edycja jest już odwołana.", "error")
+        return redirect(request.referrer or url_for("coordinator.panel"))
+
+    reason = request.form.get("reason", "").strip() or None
+    event.is_cancelled = True
+    event.cancel_reason = reason
+    log_activity("Odwołano edycję", details=reason, event=event)
+    db.session.commit()
+
+    flash(f"Sobota {event.date.strftime('%d.%m.%Y')} została oznaczona jako odwołana. Nowe zgłoszenia są zablokowane.", "info")
+    return redirect(request.referrer or url_for("coordinator.panel"))
+
+
+@coordinator_bp.route("/soboty/<int:event_id>/przywroc", methods=["POST"])
+@coordinator_required
+def restore_saturday(event_id):
+    """Cofa oznaczenie edycji jako odwołanej."""
+    event = SaturdayEvent.query.get_or_404(event_id)
+    event.is_cancelled = False
+    event.cancel_reason = None
+    log_activity("Przywrócono edycję", event=event)
+    db.session.commit()
+
+    flash(f"Sobota {event.date.strftime('%d.%m.%Y')} została przywrócona - zgłoszenia znów są możliwe.", "success")
+    return redirect(request.referrer or url_for("coordinator.panel"))
+
+
 @coordinator_bp.route("/sobota/<int:event_id>/role/dodaj", methods=["POST"])
 @coordinator_required
 def add_role(event_id):
     event = SaturdayEvent.query.get_or_404(event_id)
+    if event.is_cancelled:
+        flash("Ta edycja jest odwołana - nie można dodawać do niej ról.", "error")
+        return redirect(url_for("main.saturday_detail", event_id=event.id))
+
     template_id = request.form.get("role_template_id", "")
     custom_name = request.form.get("custom_name", "").strip()
+    quantity = _parse_slots(request.form.get("quantity"))
 
     if custom_name:
         name, role_template_id = custom_name, None
@@ -287,10 +352,15 @@ def add_role(event_id):
         flash("Wybierz rolę z listy lub podaj własną nazwę.", "error")
         return redirect(url_for("main.saturday_detail", event_id=event.id))
 
-    db.session.add(EventRole(event_id=event.id, role_template_id=role_template_id, name=name))
-    log_activity("Dodano rolę do soboty", details=name, event=event)
+    for _ in range(quantity):
+        db.session.add(EventRole(event_id=event.id, role_template_id=role_template_id, name=name))
+    log_activity(
+        "Dodano rolę do soboty" if quantity == 1 else "Dodano role do soboty",
+        details=f"{name}" if quantity == 1 else f"{name} ×{quantity}",
+        event=event,
+    )
     db.session.commit()
-    flash(f"Dodano rolę: {name}", "success")
+    flash(f"Dodano rolę: {name}" if quantity == 1 else f"Dodano {quantity} miejsc: {name}", "success")
     return redirect(url_for("main.saturday_detail", event_id=event.id))
 
 
@@ -317,7 +387,7 @@ def manual_assign_form(event_role_id):
     """Formularz ręcznego zablokowania wolnej roli dla osoby, która zgłosiła
     się innym kanałem niż przez panel (telefon, w innej grupie itp.)."""
     event_role = EventRole.query.get_or_404(event_role_id)
-    if event_role.active_signup is not None:
+    if event_role.active_signup is not None or event_role.event.is_cancelled:
         return render_template("main/_role_row.html", event_role=event_role)
 
     users = User.query.order_by(User.first_name, User.last_name).all()
@@ -339,7 +409,7 @@ def manual_assign(event_role_id):
             event_role=event_role, users=users, error=message, mode=mode, form=request.form,
         )
 
-    if event_role.active_signup is not None:
+    if event_role.active_signup is not None or event_role.event.is_cancelled:
         return render_template("main/_role_row.html", event_role=event_role)
 
     mode = request.form.get("mode", "existing")

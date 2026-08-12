@@ -35,10 +35,13 @@ def seed_role_templates(db):
 
 def apply_default_roles_to_event(db, event):
     """Tworzy zestaw ról (EventRole) dla nowo utworzonej soboty na podstawie
-    ról oznaczonych przez koordynatora jako domyślne (RoleTemplate.is_default)."""
+    ról oznaczonych przez koordynatora jako domyślne (RoleTemplate.is_default),
+    po `RoleTemplate.default_slots` niezależnych slotów na rolę (część ról,
+    np. Parkwalker czy Pacemaker, potrzebuje kilku osób jednocześnie)."""
     from .models import RoleTemplate, EventRole
 
     templates = RoleTemplate.query.filter_by(is_default=True).order_by(RoleTemplate.sort_order).all()
     for t in templates:
-        db.session.add(EventRole(event_id=event.id, role_template_id=t.id, name=t.name))
+        for _ in range(t.default_slots):
+            db.session.add(EventRole(event_id=event.id, role_template_id=t.id, name=t.name))
     db.session.commit()

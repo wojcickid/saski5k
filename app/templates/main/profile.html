@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Mój profil{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold text-parkrun-dark mb-1">Mój profil</h1>
+<p class="text-gray-500 text-sm mb-6">Zalogowano jako {{ current_user.email }}.</p>
+
+<div class="grid gap-6 max-w-lg">
+    <div class="bg-white border border-gray-100 rounded-2xl p-6">
+        <h2 class="text-sm font-semibold text-gray-700 mb-4">Dane osobowe</h2>
+        <form method="post" class="space-y-4">
+            <input type="hidden" name="form_type" value="profile">
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Imię</label>
+                    <input type="text" name="first_name" value="{{ current_user.first_name }}" required
+                           class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-parkrun-green">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Nazwisko</label>
+                    <input type="text" name="last_name" value="{{ current_user.last_name }}" required
+                           class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-parkrun-green">
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">Adres e-mail</label>
+                <input type="email" name="email" value="{{ current_user.email }}" required
+                       class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-parkrun-green">
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">Kod Uczestnika parkrun</label>
+                <input type="text" name="parkrun_id" value="{{ current_user.parkrun_id }}" required
+                       pattern="^[Aa]\d{6,8}$" placeholder="np. A1234567"
+                       class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-parkrun-green">
+            </div>
+            <button type="submit"
+                    class="bg-parkrun-green text-white font-semibold px-4 py-2 rounded-lg hover:bg-parkrun-dark transition">
+                Zapisz zmiany
+            </button>
+        </form>
+    </div>
+
+    <div class="bg-white border border-gray-100 rounded-2xl p-6">
+        <h2 class="text-sm font-semibold text-gray-700 mb-4">Zmiana hasła</h2>
+        <form method="post" class="space-y-4">
+            <input type="hidden" name="form_type" value="password">
+            <div>
+                <label class="block text-sm font-medium mb-1">Obecne hasło</label>
+                <input type="password" name="current_password" required
+                       class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-parkrun-green">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Nowe hasło</label>
+                    <input type="password" name="new_password" required minlength="6"
+                           class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-parkrun-green">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Powtórz nowe hasło</label>
+                    <input type="password" name="new_password2" required minlength="6"
+                           class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-parkrun-green">
+                </div>
+            </div>
+            <button type="submit"
+                    class="bg-white border border-parkrun-green text-parkrun-green font-semibold px-4 py-2 rounded-lg hover:bg-parkrun-light transition">
+                Zmień hasło
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
