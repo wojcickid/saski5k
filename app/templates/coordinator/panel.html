@@ -1,7 +1,13 @@
 {% extends "base.html" %}
 {% block title %}Panel koordynatora{% endblock %}
 {% block content %}
-<h1 class="text-2xl font-bold text-parkrun-dark mb-1">Panel koordynatora</h1>
+<div class="flex flex-wrap items-start justify-between gap-3 mb-1">
+    <h1 class="text-2xl font-bold text-parkrun-dark">Panel koordynatora</h1>
+    <a href="{{ url_for('coordinator.import_roster') }}"
+       class="text-sm font-semibold bg-white border border-parkrun-green text-parkrun-green px-4 py-2 rounded-lg hover:bg-parkrun-light transition whitespace-nowrap">
+        📥 Import harmonogramu
+    </a>
+</div>
 <p class="text-gray-500 text-sm mb-6">Zarządzaj kalendarzem sobót i zapotrzebowaniem na role.</p>
 
 <div class="bg-white border border-gray-100 rounded-2xl p-4 mb-6">

@@ -169,26 +169,56 @@ jak na oficjalnej stronie parkrun.pl), zalogowany dodatkowo może się zgłasza�
 
 ## Domyślny słownik ról (seedowany automatycznie)
 
-**Obowiązkowe:** Koordynator spotkania (Run Director), Pomiar czasu (Timekeeper),
-Wydawanie tokenów (Finish Tokens), Skanowanie kodów uczestników (Barcode Scanner),
-Biegacz zamykający (Tail Walker), Odprawa debiutantów (First Timers Welcome).
+Nazwy ról odpowiadają dokładnie terminologii używanej w harmonogramach/eksportach
+parkrun.pl, żeby import harmonogramu (patrz niżej) dopasowywał się do słownika bez ręcznego mapowania:
 
-**Dodatkowe:** Wolontariusz na trasie (Marshal), Fotograf, Sortowanie tokenów,
-Instruktaż/Przechowywanie sprzętu, Autor raportu z biegu, Parkwalker.
+**Obowiązkowe:** Koordynator(ka) spotkania, Mierząc(a)y czas, Odprawa debiutantów,
+Skanując(a)y uczestników, Wydając(a)y tokeny, Zamykając(a)y stawkę.
 
-Przy tworzeniu nowej soboty system automatycznie tworzy po jednym „slocie” dla
-każdej roli oznaczonej jako domyślna — koordynator może dowolnie dodać kolejne sloty
-tej samej roli (np. drugiego skanera) lub usunąć niepotrzebne (o ile nie mają
-aktywnego zgłoszenia).
+**Dodatkowe:** Fotograf, Rozstawiając(a)y oznakowanie, Zbierając(a)y oznakowanie,
+Przygotowując(a)y raport, Sprawdzając(a)y trasę, Sortując(a)y tokeny, Wprowadzając(a)y
+wyniki, Komunikacja i promocja, Ubezpieczając(a)y trasę, Przechowując(a)y wyposażenie,
+parkwalker, Inne, Wyznaczanie tempa (ta jedna jako **nie-domyślna** — u nas odbywa się
+tylko co ok. 5 spotkań, nie na każdą sobotę).
+
+### Sloty z etykietami (np. wyznaczanie tempa na różne czasy)
+
+Niektóre role mają kilka slotów, które **nie są identyczne** — np. przy „Wyznaczaniu
+tempa” jednocześnie biegnie kilka osób, każda na inny, wyznaczony czas (20 min, 25 min,
+30 min...) i trzeba wiedzieć, kto się zgłasza na który. W formularzu „Dodaj rolę do
+zapotrzebowania” (strona konkretnej soboty) jest do tego rozwijana sekcja „Sloty tej
+roli różnią się między sobą?” — wpisujesz etykiety oddzielone przecinkami (np. `20 min,
+25 min, 30 min, 35 min`) i każda tworzy osobny, niezależnie zgłaszalny slot z tą
+etykietą w nazwie (np. „Wyznaczanie tempa · 25 min”). Pole „ile miejsc” jest wtedy
+ignorowane — liczbę slotów wyznacza liczba podanych etykiet.
+
+Przy tworzeniu nowej soboty system automatycznie tworzy tyle „slotów” dla każdej roli
+oznaczonej jako domyślna, ile wskazuje jej **liczba miejsc domyślnie** (np. 1 dla
+Fotografa, ale można ustawić 4 dla Parkwalkera) — edytowalne w panelu koordynatora.
+Koordynator może dowolnie dodać kolejne sloty tej samej roli na konkretną sobotę (np.
+dodatkowego skanera) lub usunąć niepotrzebne (o ile nie mają aktywnego zgłoszenia).
 
 W panelu koordynatora, w zwijanej sekcji **„Domyślny zestaw ról na nowe soboty”**
 (domyślnie schowanej — to ustawienie na rzadko), można:
 - zaznaczać/odznaczać, które role z powyższego słownika mają trafiać automatycznie do
-  nowo tworzonych sobót,
-- **dodawać własne role do słownika**, edytować istniejące (nazwa, kategoria, opis) lub
-  je usuwać,
+  nowo tworzonych sobót, oraz ustawiać ich domyślną liczbę miejsc,
+- **dodawać własne role do słownika**, edytować istniejące (nazwa, kategoria, opis,
+  liczba miejsc) lub je usuwać,
 - kliknięciem „Zastosuj do nadchodzących sobót” zsynchronizować już zaplanowane soboty
   z aktualnym wyborem (role z aktywnym zgłoszeniem nigdy nie są automatycznie usuwane).
+
+### Import harmonogramu (`/koordynator/import`)
+
+Pozwala wkleić już istniejącą obsadę soboty wprost z arkusza/eksportu (dwie kolumny
+oddzielone tabulatorem: rola i imię z nazwiskiem; puste pole = wolne miejsce) zamiast
+klikać każdą rolę osobno. Data jest rozpoznawana automatycznie z nagłówka (np.
+`rola<TAB>15 sierpnia 2026`) albo podawana ręcznie. Ponieważ to import już
+potwierdzonej, historycznej obsady — kod parkrun nie jest wymagany, a zgłoszenia
+trafiają od razu jako *Zatwierdzone* (zewnętrzne, bez konta). Role, których nie ma
+jeszcze w słowniku, dopisują się do niego automatycznie (jako dodatkowe, nie
+domyślne). Jeśli sobota o tej dacie już ma wolne role o tej samej nazwie (np.
+wygenerowane wcześniej domyślnie), import najpierw je wypełnia zamiast tworzyć
+duplikaty.
 
 ## Edycje specjalne (poza standardową sobotą)
 

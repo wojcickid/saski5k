@@ -84,25 +84,42 @@
 {% if current_user.is_coordinator() and not event.is_cancelled %}
 <div class="bg-white border border-gray-100 rounded-2xl p-4 mb-4">
     <p class="text-sm font-semibold text-gray-700 mb-2">Dodaj rolę do zapotrzebowania na tę sobotę</p>
-    <form method="post" action="{{ url_for('coordinator.add_role', event_id=event.id) }}"
-          class="flex flex-col sm:flex-row sm:flex-wrap gap-2">
-        <select name="role_template_id" class="flex-1 min-w-[10rem] rounded-lg border border-gray-300 px-3 py-2 text-sm">
-            <option value="">— wybierz rolę z listy —</option>
-            {% for t in role_templates %}
-            <option value="{{ t.id }}">{{ t.name }}</option>
-            {% endfor %}
-        </select>
-        <span class="text-gray-400 text-sm self-center">lub</span>
-        <input type="text" name="custom_name" placeholder="własna nazwa roli"
-               class="flex-1 min-w-[10rem] rounded-lg border border-gray-300 px-3 py-2 text-sm">
-        <input type="number" name="quantity" value="1" min="1" max="20" title="Ile miejsc dodać naraz (np. kilku Parkwalkerów)"
-               class="w-20 rounded-lg border border-gray-300 px-3 py-2 text-sm">
-        <button type="submit"
-                class="text-sm font-semibold bg-parkrun-green text-white px-4 py-2 rounded-lg hover:bg-parkrun-dark transition whitespace-nowrap">
-            + Dodaj rolę
-        </button>
+    <form method="post" action="{{ url_for('coordinator.add_role', event_id=event.id) }}" class="space-y-2">
+        <div class="flex flex-col sm:flex-row sm:flex-wrap gap-2">
+            <select name="role_template_id" class="flex-1 min-w-[10rem] rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                <option value="">— wybierz rolę z listy —</option>
+                {% for t in role_templates %}
+                <option value="{{ t.id }}">{{ t.name }}</option>
+                {% endfor %}
+            </select>
+            <span class="text-gray-400 text-sm self-center">lub</span>
+            <input type="text" name="custom_name" placeholder="własna nazwa roli"
+                   class="flex-1 min-w-[10rem] rounded-lg border border-gray-300 px-3 py-2 text-sm">
+            <input type="number" name="quantity" value="1" min="1" max="20" title="Ile miejsc dodać naraz (np. kilku Parkwalkerów)"
+                   class="w-20 rounded-lg border border-gray-300 px-3 py-2 text-sm">
+            <button type="submit"
+                    class="text-sm font-semibold bg-parkrun-green text-white px-4 py-2 rounded-lg hover:bg-parkrun-dark transition whitespace-nowrap">
+                + Dodaj rolę
+            </button>
+        </div>
+
+        <details class="group">
+            <summary class="cursor-pointer select-none list-none inline-flex items-center gap-1 text-xs text-gray-400 hover:text-parkrun-green transition">
+                <span class="inline-block transition-transform group-open:rotate-90">▸</span>
+                Sloty tej roli różnią się między sobą? (np. wyznaczanie tempa na różne czasy)
+            </summary>
+            <div class="mt-2">
+                <input type="text" name="labels" placeholder="np. 20 min, 22 min, 25 min, 28 min, 30 min, 35 min, 40 min"
+                       class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                <p class="text-xs text-gray-400 mt-1">
+                    Lista etykiet oddzielona przecinkami (albo po jednej w linii) — każda tworzy osobny slot
+                    z tą etykietą w nazwie (np. „Wyznaczanie tempa · 25 min”), żeby było wiadomo, kto na jaki
+                    czas się zgłasza. Gdy wypełnione, pole „ile miejsc” powyżej jest ignorowane.
+                </p>
+            </div>
+        </details>
     </form>
-    <p class="text-xs text-gray-400 mt-1">Pole liczbowe = ile niezależnych miejsc tej roli dodać na tę sobotę (np. 2, jeśli potrzeba dwóch Parkwalkerów).</p>
+    <p class="text-xs text-gray-400 mt-1">Pole liczbowe = ile niezależnych, identycznych miejsc tej roli dodać na tę sobotę (np. 2, jeśli potrzeba dwóch Parkwalkerów).</p>
 </div>
 {% endif %}
 

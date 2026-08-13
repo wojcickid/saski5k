@@ -51,28 +51,10 @@ def create_app(config_class=Config):
             "event_name": app.config["EVENT_NAME"],
         }
 
-    _MONTHS_PL = {
-        1: "stycznia", 2: "lutego", 3: "marca", 4: "kwietnia",
-        5: "maja", 6: "czerwca", 7: "lipca", 8: "sierpnia",
-        9: "września", 10: "października", 11: "listopada", 12: "grudnia",
-    }
+    from .pl_dates import format_pl_date, format_pl_weekday
 
-    @app.template_filter("pl_date")
-    def pl_date(d):
-        """Formatuje datę po polsku, np. '16 sierpnia 2026'."""
-        if not d:
-            return ""
-        return f"{d.day} {_MONTHS_PL[d.month]} {d.year}"
-
-    _WEEKDAYS_PL = ["poniedziałek", "wtorek", "środa", "czwartek", "piątek", "sobota", "niedziela"]
-
-    @app.template_filter("pl_weekday")
-    def pl_weekday(d):
-        """Zwraca nazwę dnia tygodnia po polsku, np. 'sobota' - przydatne dla
-        edycji specjalnych, które mogą wypadać w dowolny dzień tygodnia."""
-        if not d:
-            return ""
-        return _WEEKDAYS_PL[d.weekday()]
+    app.template_filter("pl_date")(format_pl_date)
+    app.template_filter("pl_weekday")(format_pl_weekday)
 
     # --- Obsługa błędów ---
     @app.errorhandler(403)

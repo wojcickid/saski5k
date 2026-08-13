@@ -1,3 +1,4 @@
+import re
 from datetime import date, timedelta
 from functools import wraps
 
@@ -5,11 +6,12 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 
 from .extensions import db
-from .models import SaturdayEvent, EventRole, RoleTemplate, Signup, SignupStatus, User, ActivityLog
+from .models import SaturdayEvent, EventRole, RoleTemplate, Signup, SignupStatus, User, ActivityLog, CUSTOM_ROLE_SORT_ORDER
 from .seed_data import apply_default_roles_to_event
 from .email_utils import send_signup_approved_email, send_signup_rejected_email
 from .auth import PARKRUN_ID_RE
 from .activity_log import log_activity
+from .pl_dates import parse_pl_date
 
 HISTORY_LIMIT = 50
 
@@ -203,7 +205,7 @@ def apply_default_roles_to_upcoming():
             if len(current) < target:
                 t = RoleTemplate.query.get(tid)
                 for _ in range(target - len(current)):
-                    db.session.add(EventRole(event_id=event.id, role_template_id=t.id, name=t.name))
+                    db.session.add(EventRole(event_id=event.id, role_template_id=t.id, name=t.name, sort_order=t.sort_order))
                     added += 1
             elif len(current) > target:
                 free_slots = [er for er in current if er.active_signup is None]
@@ -329,6 +331,13 @@ def restore_saturday(event_id):
     return redirect(request.referrer or url_for("coordinator.panel"))
 
 
+def _parse_labels(raw):
+    """Zamienia 'A, B\\nC' na ['A', 'B', 'C'] - etykiety slotów rozdzielone
+    przecinkiem i/lub nowymi liniami, np. czasy przy Wyznaczaniu tempa
+    (20 min, 25 min, 30 min...)."""
+    return [part.strip() for part in re.split(r"[,\n]", raw) if part.strip()]
+
+
 @coordinator_bp.route("/sobota/<int:event_id>/role/dodaj", methods=["POST"])
 @coordinator_required
 def add_role(event_id):
@@ -340,27 +349,39 @@ def add_role(event_id):
     template_id = request.form.get("role_template_id", "")
     custom_name = request.form.get("custom_name", "").strip()
     quantity = _parse_slots(request.form.get("quantity"))
+    labels = _parse_labels(request.form.get("labels", ""))
 
     if custom_name:
-        name, role_template_id = custom_name, None
+        name, role_template_id, role_sort_order = custom_name, None, CUSTOM_ROLE_SORT_ORDER
     elif template_id.isdigit():
         t = RoleTemplate.query.get(int(template_id))
         if not t:
             abort(404)
-        name, role_template_id = t.name, t.id
+        name, role_template_id, role_sort_order = t.name, t.id, t.sort_order
     else:
         flash("Wybierz rolę z listy lub podaj własną nazwę.", "error")
         return redirect(url_for("main.saturday_detail", event_id=event.id))
 
-    for _ in range(quantity):
-        db.session.add(EventRole(event_id=event.id, role_template_id=role_template_id, name=name))
+    # Etykiety (np. "20 min, 25 min, 30 min") -> osobny slot na każdą, z etykietą
+    # wbudowaną w nazwę (żeby export/wyświetlanie/import działały bez zmian).
+    # Gdy podane, ignorują pole "ile miejsc" - liczbę slotów wyznacza liczba etykiet.
+    slot_names = [f"{name} · {label}" for label in labels] if labels else [name] * quantity
+
+    for slot_name in slot_names:
+        db.session.add(EventRole(
+            event_id=event.id, role_template_id=role_template_id, name=slot_name, sort_order=role_sort_order,
+        ))
     log_activity(
-        "Dodano rolę do soboty" if quantity == 1 else "Dodano role do soboty",
-        details=f"{name}" if quantity == 1 else f"{name} ×{quantity}",
+        "Dodano rolę do soboty" if len(slot_names) == 1 else "Dodano role do soboty",
+        details=", ".join(slot_names) if labels else (name if len(slot_names) == 1 else f"{name} ×{len(slot_names)}"),
         event=event,
     )
     db.session.commit()
-    flash(f"Dodano rolę: {name}" if quantity == 1 else f"Dodano {quantity} miejsc: {name}", "success")
+    flash(
+        f"Dodano rolę: {slot_names[0]}" if len(slot_names) == 1
+        else f"Dodano {len(slot_names)} miejsc: {name}" + (" (z etykietami)" if labels else ""),
+        "success",
+    )
     return redirect(url_for("main.saturday_detail", event_id=event.id))
 
 
@@ -485,3 +506,151 @@ def reject_signup(signup_id):
     db.session.commit()
     send_signup_rejected_email(signup)
     return render_template("main/_role_row.html", event_role=signup.event_role)
+
+
+def _split_row(line):
+    """Dzieli wiersz na komórki: najpierw po tabulatorze (standard przy
+    wklejaniu z arkusza), a jeśli nie ma tabulatora - po >=2 spacjach
+    (na wypadek wklejenia z tabeli renderowanej jako zwykły tekst)."""
+    parts = line.split("\t")
+    if len(parts) < 2:
+        parts = re.split(r" {2,}", line)
+    return [p.strip() for p in parts]
+
+
+def _titlecase_name(name):
+    """'Ewa IWASZKO' -> 'Ewa Iwaszko', 'MARCINIAK-SZNAJDER' -> 'Marciniak-Sznajder'
+    - kosmetyczna normalizacja imion i nazwisk wklejonych z eksportu (często
+    w całości wielkimi literami), z uwzględnieniem nazwisk dwuczłonowych."""
+    def cap_word(word):
+        return "-".join(part.capitalize() for part in word.split("-"))
+
+    return " ".join(cap_word(part) for part in name.split())
+
+
+@coordinator_bp.route("/import", methods=["GET", "POST"])
+@coordinator_required
+def import_roster():
+    """Import obsady soboty wklejonej wprost z arkusza/eksportu (dwie kolumny:
+    rola, imię i nazwisko wolontariusza - rozdzielone tabulatorem). To już
+    potwierdzona, historyczna obsada, więc importowane zgłoszenia trafiają od
+    razu jako Zatwierdzone i zewnętrzne (bez kodu parkrun - nie jest tu
+    potrzebny). Role, których nie ma jeszcze w słowniku, dopisują się do niego
+    automatycznie (jako dodatkowe, nie domyślne)."""
+    if request.method == "POST":
+        raw = request.form.get("data", "")
+        date_str = request.form.get("date", "").strip()
+
+        lines = [line for line in raw.splitlines() if line.strip()]
+        if not lines:
+            flash("Wklej dane do zaimportowania.", "error")
+            return render_template("coordinator/import_roster.html", raw=raw, date_str=date_str)
+
+        event_date = None
+        if date_str:
+            try:
+                event_date = date.fromisoformat(date_str)
+            except ValueError:
+                flash("Nieprawidłowa data.", "error")
+                return render_template("coordinator/import_roster.html", raw=raw, date_str=date_str)
+
+        # Spróbuj rozpoznać nagłówek w pierwszym wierszu, np. "rola\t15 sierpnia 2026".
+        first_cells = _split_row(lines[0])
+        header_date = parse_pl_date(first_cells[1]) if len(first_cells) > 1 else None
+        looks_like_header = first_cells[0].lower() == "rola" or header_date is not None
+        data_lines = lines[1:] if looks_like_header else lines
+        if event_date is None:
+            event_date = header_date
+
+        if event_date is None:
+            flash(
+                "Nie udało się rozpoznać daty. Podaj ją w polu powyżej albo zostaw w danych "
+                "nagłówek w formacie „rola [TAB] 15 sierpnia 2026”.",
+                "error",
+            )
+            return render_template("coordinator/import_roster.html", raw=raw, date_str=date_str)
+
+        rows = []
+        for line in data_lines:
+            cells = _split_row(line)
+            role_name = cells[0].strip() if cells else ""
+            volunteer_name = cells[1].strip() if len(cells) > 1 else ""
+            if role_name:
+                rows.append((role_name, volunteer_name))
+
+        if not rows:
+            flash("Brak wierszy z rolami do zaimportowania.", "error")
+            return render_template("coordinator/import_roster.html", raw=raw, date_str=date_str)
+
+        event = SaturdayEvent.query.filter_by(date=event_date).first()
+        created_event = False
+        if not event:
+            event = SaturdayEvent(date=event_date, is_special=(event_date.weekday() != SATURDAY_WEEKDAY))
+            db.session.add(event)
+            db.session.flush()
+            created_event = True
+
+        # Wolne (bez aktywnego zgłoszenia) role już istniejące na tej sobocie -
+        # importer najpierw je wykorzystuje zamiast tworzyć duplikaty, np. gdy
+        # sobota ma już domyślnie wygenerowany, pusty zestaw ról i teraz
+        # importujemy do niej faktyczną, potwierdzoną obsadę.
+        free_by_name = {}
+        for er in event.event_roles:
+            if er.active_signup is None:
+                free_by_name.setdefault(er.name, []).append(er)
+
+        new_templates = new_roles = reused_roles = new_signups = 0
+
+        for role_name, volunteer_name in rows:
+            template = RoleTemplate.query.filter_by(name=role_name).first()
+            if not template:
+                max_sort = db.session.query(db.func.max(RoleTemplate.sort_order)).scalar() or 0
+                template = RoleTemplate(
+                    name=role_name, category="support", sort_order=max_sort + 1,
+                    is_default=False, default_slots=1,
+                )
+                db.session.add(template)
+                db.session.flush()
+                new_templates += 1
+
+            reusable = free_by_name.get(template.name)
+            if reusable:
+                event_role = reusable.pop(0)
+                reused_roles += 1
+            else:
+                event_role = EventRole(
+                    event_id=event.id, role_template_id=template.id, name=template.name,
+                    sort_order=template.sort_order,
+                )
+                db.session.add(event_role)
+                db.session.flush()
+                new_roles += 1
+
+            if volunteer_name:
+                db.session.add(Signup(
+                    event_role_id=event_role.id,
+                    external_name=_titlecase_name(volunteer_name),
+                    status=SignupStatus.APPROVED,
+                    assigned_by_coordinator=True,
+                ))
+                new_signups += 1
+
+        log_activity(
+            "Zaimportowano harmonogram",
+            details=f"{new_roles} nowych ról, {reused_roles} uzupełnionych, {new_signups} zgłoszeń, {new_templates} nowych ról w słowniku",
+            event=event,
+        )
+        db.session.commit()
+
+        message = (
+            f"Zaimportowano sobotę {event.date.strftime('%d.%m.%Y')}"
+            f"{' (nowa sobota)' if created_event else ''}: "
+            f"{new_roles + reused_roles} ról ({reused_roles} uzupełniło istniejące wolne miejsca), "
+            f"{new_signups} przypisanych osób"
+        )
+        if new_templates:
+            message += f", {new_templates} nowych ról dodanych do słownika"
+        flash(message + ".", "success")
+        return redirect(url_for("main.saturday_detail", event_id=event.id))
+
+    return render_template("coordinator/import_roster.html", raw="", date_str="")

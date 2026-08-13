@@ -5,6 +5,11 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 from .extensions import db
 
+# Sort_order używany dla EventRole bez powiązanego RoleTemplate (rola dodana
+# jako "własna nazwa" na konkretną sobotę) - ląduje po wszystkich rolach ze
+# słownika, ale nadal grupuje się z innymi wystąpieniami tej samej nazwy.
+CUSTOM_ROLE_SORT_ORDER = 9999
+
 
 class Role:
     """Role użytkownika w systemie."""
@@ -124,11 +129,17 @@ class SaturdayEvent(db.Model):
     is_cancelled = db.Column(db.Boolean, default=False, nullable=False)
     cancel_reason = db.Column(db.String(255), nullable=True)
 
+    # Sortowanie: najpierw wg pozycji roli w słowniku (sort_order - core przed
+    # support, w kolejności ustalonej w RoleTemplate), potem alfabetycznie po
+    # nazwie (grupuje własne/niestandardowe role o tym samym sort_order), na
+    # końcu wg id (stabilna kolejność wielu slotów tej samej roli - najstarszy
+    # pierwszy). Dzięki temu kolejne sloty jednej roli (np. drugi Mierzący
+    # czas) zawsze lądują obok siebie, nie na końcu listy.
     event_roles = db.relationship(
         "EventRole",
         back_populates="event",
         cascade="all, delete-orphan",
-        order_by="EventRole.id",
+        order_by="EventRole.sort_order, EventRole.name, EventRole.id",
     )
 
     @property
@@ -160,6 +171,12 @@ class EventRole(db.Model):
     event_id = db.Column(db.Integer, db.ForeignKey("saturday_events.id"), nullable=False)
     role_template_id = db.Column(db.Integer, db.ForeignKey("role_templates.id"), nullable=True)
     name = db.Column(db.String(120), nullable=False)
+    # Snapshot RoleTemplate.sort_order w momencie utworzenia (albo CUSTOM_ROLE_SORT_ORDER
+    # dla ról bez szablonu) - dzięki temu kolejne sloty tej samej roli dodawane
+    # później (drugi Mierzący czas, import harmonogramu, synchronizacja domyślnych
+    # ról) wyświetlają się OBOK pierwszego, a nie na końcu listy wg id/kolejności
+    # dodania. Patrz kolejność w event_roles poniżej.
+    sort_order = db.Column(db.Integer, default=0, nullable=False)
 
     event = db.relationship("SaturdayEvent", back_populates="event_roles")
     role_template = db.relationship("RoleTemplate")

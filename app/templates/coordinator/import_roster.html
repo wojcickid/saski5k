@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Import harmonogramu{% endblock %}
+{% block content %}
+<a href="{{ url_for('coordinator.panel') }}" class="text-sm text-parkrun-green hover:underline">&larr; Panel koordynatora</a>
+<h1 class="text-2xl font-bold text-parkrun-dark mt-1 mb-1">Import harmonogramu</h1>
+<p class="text-gray-500 text-sm mb-6 max-w-2xl">
+    Wklej obsadę soboty wprost z arkusza/eksportu (dwie kolumny oddzielone tabulatorem: rola i imię
+    z nazwiskiem wolontariusza). Puste pole w drugiej kolumnie = wolne miejsce. Kod parkrun nie jest
+    tu potrzebny — to import już potwierdzonej, historycznej obsady, a nie nowe zgłoszenie, więc
+    trafia od razu jako <strong>Zatwierdzone</strong>.
+</p>
+
+<div class="bg-white border border-gray-100 rounded-2xl p-6">
+    <form method="post" class="space-y-4">
+        <div>
+            <label class="block text-sm font-medium mb-1">Data soboty (opcjonalnie)</label>
+            <input type="date" name="date" value="{{ date_str }}"
+                   class="rounded-lg border border-gray-300 px-3 py-2 text-sm">
+            <p class="text-xs text-gray-400 mt-1">
+                Zostaw puste, jeśli pierwszy wklejony wiersz to nagłówek z datą (np.
+                <code class="bg-gray-100 px-1 rounded">rola&nbsp;&nbsp;15 sierpnia 2026</code>) —
+                data zostanie rozpoznana automatycznie.
+            </p>
+        </div>
+        <div>
+            <label class="block text-sm font-medium mb-1">Dane (wklejone z arkusza)</label>
+            <textarea name="data" rows="16" required
+                      placeholder="rola	15 sierpnia 2026&#10;Koordynator(ka) spotkania	Ewa Iwaszko&#10;Fotograf	&#10;parkwalker	Daniel Osiński"
+                      class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono">{{ raw }}</textarea>
+        </div>
+        <button type="submit"
+                class="text-sm font-semibold bg-parkrun-green text-white px-4 py-2 rounded-lg hover:bg-parkrun-dark transition">
+            Importuj
+        </button>
+    </form>
+</div>
+
+<div class="mt-4 text-xs text-gray-400 max-w-2xl space-y-1">
+    <p>Role, których nie ma jeszcze w słowniku, zostaną do niego automatycznie dopisane (jako
+       dodatkowe, nie domyślne — możesz to później zmienić w panelu koordynatora).</p>
+    <p>Jeśli ta sama rola powtarza się kilka razy w wklejonych danych, każde wystąpienie staje się
+       osobnym, niezależnym miejscem (tak jak przy kilku Parkwalkerach).</p>
+    <p>Jeśli sobota o tej dacie już istnieje i ma wolne (nieobsadzone) role o tej samej nazwie —
+       import najpierw je wypełnia, zamiast tworzyć duplikaty. Dopiero gdy zabraknie wolnych miejsc,
+       dokłada nowe.</p>
+</div>
+{% endblock %}
