@@ -242,3 +242,10 @@ są oznaczone gwiazdką ⭐ w kalendarzu i na liście sobót.
   widoczne publicznie, bez logowania — świadoma decyzja, zgodna z tym, jak działa
   oficjalna strona parkrun.pl. Kod uczestnika parkrun pozostaje widoczny wyłącznie dla
   zalogowanego koordynatora/admina.
+
+## Licencja
+
+Projekt jest dostępny na licencji **MIT** (patrz plik [`LICENSE`](LICENSE)) — możesz go
+swobodnie kopiować, modyfikować i wdrażać dla innej lokalizacji parkrun, komercyjnie
+i niekomercyjnie, bez pytania o zgodę. Jedyny wymóg to zachowanie informacji o prawach
+autorskich w kodzie źródłowym.

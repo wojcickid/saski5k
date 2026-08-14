@@ -519,7 +519,7 @@ def _split_row(line):
 
 
 def _titlecase_name(name):
-    """'Ewa IWASZKO' -> 'Ewa Iwaszko', 'MARCINIAK-SZNAJDER' -> 'Marciniak-Sznajder'
+    """'Jan KOWALSKI' -> 'Jan Kowalski', 'NOWAK-KOWALSKA' -> 'Nowak-Kowalska'
     - kosmetyczna normalizacja imion i nazwisk wklejonych z eksportu (często
     w całości wielkimi literami), z uwzględnieniem nazwisk dwuczłonowych."""
     def cap_word(word):

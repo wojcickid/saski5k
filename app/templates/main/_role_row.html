@@ -1,5 +1,7 @@
 {% set signup = event_role.active_signup %}
-<div id="role-row-{{ event_role.id }}"
+{% set row_status = 'approved' if (signup and signup.status == 'Zatwierdzone') else ('pending' if (signup and signup.status == 'Oczekujące') else 'free') %}
+{% set role_base = event_role.role_template.name if event_role.role_template else event_role.name %}
+<div id="role-row-{{ event_role.id }}" data-status="{{ row_status }}" data-role-base="{{ role_base }}"
      class="grid grid-cols-1 sm:grid-cols-[1.4fr_1.4fr_auto] gap-2 sm:gap-4 items-center p-4 border-b border-gray-100 last:border-0">
 
     <div class="font-medium text-gray-800">

@@ -1,0 +1,90 @@
+{# Pasek filtrów nad listą ról (status + konkretna rola). Oczekuje zmiennej
+   `role_base_names` (lista unikalnych nazw ról na tej sobocie) i opcjonalnie
+   `default_status_filter` ('all' domyślnie, albo 'free'). Wymaga, żeby lista
+   wierszy ról na stronie miała kontener z id="role-list-body", a każdy wiersz
+   atrybuty data-status/data-role-base (patrz main/_role_row.html). #}
+<div id="role-filters" class="bg-white border border-gray-100 rounded-2xl p-3 mb-2 flex flex-wrap items-center gap-2">
+    <span class="text-xs font-semibold text-gray-500">Status:</span>
+    <div class="flex flex-wrap gap-1.5">
+        <button type="button" data-filter="all"
+                class="role-status-btn text-xs font-semibold px-2.5 py-1 rounded-full transition
+                    {% if (default_status_filter or 'all') == 'all' %}bg-parkrun-green text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+            Wszystkie
+        </button>
+        <button type="button" data-filter="free"
+                class="role-status-btn text-xs font-semibold px-2.5 py-1 rounded-full transition
+                    {% if default_status_filter == 'free' %}bg-parkrun-green text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+            Wolne
+        </button>
+        <button type="button" data-filter="pending"
+                class="role-status-btn text-xs font-semibold px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition">
+            Oczekujące
+        </button>
+        <button type="button" data-filter="approved"
+                class="role-status-btn text-xs font-semibold px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition">
+            Zatwierdzone
+        </button>
+    </div>
+    {% if role_base_names %}
+    <span class="text-xs font-semibold text-gray-500 ml-1">Rola:</span>
+    <select id="role-filter-select" class="text-sm rounded-lg border border-gray-300 px-2 py-1">
+        <option value="">wszystkie role</option>
+        {% for rb in role_base_names %}
+        <option value="{{ rb }}">{{ rb }}</option>
+        {% endfor %}
+    </select>
+    {% endif %}
+    <span id="role-filter-count" class="text-xs text-gray-400 ml-auto"></span>
+</div>
+
+<script>
+(function () {
+    const statusButtons = document.querySelectorAll('#role-filters .role-status-btn');
+    const roleSelect = document.getElementById('role-filter-select');
+    const countEl = document.getElementById('role-filter-count');
+
+    function applyRoleFilters() {
+        const activeBtn = document.querySelector('#role-filters .role-status-btn[data-active="1"]');
+        const statusFilter = activeBtn ? activeBtn.dataset.filter : 'all';
+        const roleFilter = roleSelect ? roleSelect.value : '';
+        const rows = document.querySelectorAll('#role-list-body [data-status]');
+        let shown = 0;
+        rows.forEach(function (row) {
+            const statusOk = statusFilter === 'all' || row.dataset.status === statusFilter;
+            const roleOk = !roleFilter || row.dataset.roleBase === roleFilter;
+            const show = statusOk && roleOk;
+            row.classList.toggle('hidden', !show);
+            if (show) shown++;
+        });
+        if (countEl) {
+            countEl.textContent = rows.length ? (shown + ' z ' + rows.length) : '';
+        }
+        const emptyMsg = document.getElementById('role-filter-empty');
+        if (emptyMsg) {
+            emptyMsg.classList.toggle('hidden', shown !== 0 || rows.length === 0);
+        }
+    }
+
+    statusButtons.forEach(function (btn) {
+        if (btn.classList.contains('bg-parkrun-green')) {
+            btn.dataset.active = '1';
+        }
+        btn.addEventListener('click', function () {
+            statusButtons.forEach(function (b) {
+                b.dataset.active = '';
+                b.classList.remove('bg-parkrun-green', 'text-white');
+                b.classList.add('bg-gray-100', 'text-gray-600');
+            });
+            btn.dataset.active = '1';
+            btn.classList.add('bg-parkrun-green', 'text-white');
+            btn.classList.remove('bg-gray-100', 'text-gray-600');
+            applyRoleFilters();
+        });
+    });
+    if (roleSelect) {
+        roleSelect.addEventListener('change', applyRoleFilters);
+    }
+    document.body.addEventListener('htmx:afterSwap', applyRoleFilters);
+    applyRoleFilters();
+})();
+</script>

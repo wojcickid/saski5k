@@ -13,6 +13,20 @@ main_bp = Blueprint("main", __name__)
 HISTORY_LIMIT = 50
 
 
+def _role_base_names(event):
+    """Unikalne 'bazowe' nazwy ról na tej sobocie (bez etykiet slotów, np. bez
+    '· 25 min' przy Wyznaczaniu tempa), w kolejności wyświetlania - do filtra
+    'Rola' na stronie soboty (main/saturday_detail.html, public_saturday_detail.html)."""
+    seen = set()
+    names = []
+    for er in event.event_roles:
+        base = er.role_template.name if er.role_template else er.name
+        if base not in seen:
+            seen.add(base)
+            names.append(base)
+    return names
+
+
 @main_bp.route("/")
 def index():
     """Strona główna: rozdzielacz nawigacyjny (hub), ten sam dla gościa i
@@ -61,7 +75,8 @@ def public_saturday_detail(event_id):
     )
 
     return render_template(
-        "main/public_saturday_detail.html", event=event, prev_event=prev_event, next_event=next_event
+        "main/public_saturday_detail.html", event=event, prev_event=prev_event, next_event=next_event,
+        role_base_names=_role_base_names(event)
     )
 
 
@@ -102,6 +117,7 @@ def saturday_detail(event_id):
         event=event,
         export_text=export_text,
         role_templates=role_templates,
+        role_base_names=_role_base_names(event),
         prev_event=prev_event,
         next_event=next_event,
         history=history,
