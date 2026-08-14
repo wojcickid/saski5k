@@ -85,6 +85,17 @@
         roleSelect.addEventListener('change', applyRoleFilters);
     }
     document.body.addEventListener('htmx:afterSwap', applyRoleFilters);
-    applyRoleFilters();
+
+    // Ten <script> renderuje się PRZED #role-list-body w HTML-u (pasek filtrów
+    // jest wizualnie nad listą ról), więc w momencie wykonania tego skryptu
+    // wiersze ról jeszcze nie istnieją w DOM - odpalenie applyRoleFilters()
+    // od razu przefiltrowałoby zero elementów (stąd bug: przycisk "Wolne"
+    // wyglądał na aktywny, ale nic się nie chowało). Czekamy na
+    // DOMContentLoaded, żeby lista ról była już sparsowana.
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', applyRoleFilters);
+    } else {
+        applyRoleFilters();
+    }
 })();
 </script>
