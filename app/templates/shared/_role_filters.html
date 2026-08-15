@@ -43,6 +43,38 @@
     const roleSelect = document.getElementById('role-filter-select');
     const countEl = document.getElementById('role-filter-count');
 
+    // Zapamiętujemy wybrany filtr w localStorage, żeby przechodzenie między
+    // sobotami (poprzednia/następna) - czyli zwykłe przeładowanie strony,
+    // nie HTMX - nie resetowało go za każdym razem do wartości domyślnej.
+    const STATUS_KEY = 'parkrunRoleFilterStatus';
+    const ROLE_KEY = 'parkrunRoleFilterRole';
+
+    function restoreSavedFilters() {
+        try {
+            const savedStatus = localStorage.getItem(STATUS_KEY);
+            if (savedStatus) {
+                const btn = document.querySelector('#role-filters .role-status-btn[data-filter="' + savedStatus + '"]');
+                if (btn) {
+                    statusButtons.forEach(function (b) {
+                        b.dataset.active = '';
+                        b.classList.remove('bg-parkrun-green', 'text-white');
+                        b.classList.add('bg-gray-100', 'text-gray-600');
+                    });
+                    btn.dataset.active = '1';
+                    btn.classList.add('bg-parkrun-green', 'text-white');
+                    btn.classList.remove('bg-gray-100', 'text-gray-600');
+                }
+            }
+            const savedRole = localStorage.getItem(ROLE_KEY);
+            if (savedRole && roleSelect) {
+                const exists = Array.prototype.some.call(roleSelect.options, function (o) { return o.value === savedRole; });
+                if (exists) roleSelect.value = savedRole;
+            }
+        } catch (e) {
+            // localStorage niedostępny (np. tryb prywatny) - zostajemy przy domyślnym filtrze.
+        }
+    }
+
     function applyRoleFilters() {
         const activeBtn = document.querySelector('#role-filters .role-status-btn[data-active="1"]');
         const statusFilter = activeBtn ? activeBtn.dataset.filter : 'all';
@@ -78,11 +110,15 @@
             btn.dataset.active = '1';
             btn.classList.add('bg-parkrun-green', 'text-white');
             btn.classList.remove('bg-gray-100', 'text-gray-600');
+            try { localStorage.setItem(STATUS_KEY, btn.dataset.filter); } catch (e) {}
             applyRoleFilters();
         });
     });
     if (roleSelect) {
-        roleSelect.addEventListener('change', applyRoleFilters);
+        roleSelect.addEventListener('change', function () {
+            try { localStorage.setItem(ROLE_KEY, roleSelect.value); } catch (e) {}
+            applyRoleFilters();
+        });
     }
     document.body.addEventListener('htmx:afterSwap', applyRoleFilters);
 
@@ -92,10 +128,14 @@
     // od razu przefiltrowałoby zero elementów (stąd bug: przycisk "Wolne"
     // wyglądał na aktywny, ale nic się nie chowało). Czekamy na
     // DOMContentLoaded, żeby lista ról była już sparsowana.
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', applyRoleFilters);
-    } else {
+    function initFilters() {
+        restoreSavedFilters();
         applyRoleFilters();
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initFilters);
+    } else {
+        initFilters();
     }
 })();
 </script>
