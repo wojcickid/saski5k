@@ -1,56 +1,60 @@
-<tr id="user-row-{{ user.id }}" class="border-b border-gray-100 last:border-0 {% if not user.is_active %}opacity-50{% endif %}">
-    <td class="p-3">
+<div id="user-row-{{ user.id }}" class="p-4 flex flex-wrap items-center justify-between gap-3 {% if not user.is_active %}opacity-50{% endif %}">
+    <div>
         <p class="font-medium text-gray-800">
             {{ user.full_name }}
             {% if not user.is_active %}
             <span class="text-xs font-semibold text-red-600 bg-red-50 rounded-full px-2 py-0.5 ml-1">zablokowany</span>
             {% endif %}
         </p>
-        <p class="text-xs text-gray-400">{{ user.email }}</p>
-    </td>
-    <td class="p-3 font-mono text-sm text-gray-600">{{ user.parkrun_id }}</td>
-    <td class="p-3">
+        <p class="text-sm text-gray-500">{{ user.email }} · <span class="font-mono">{{ user.parkrun_id }}</span></p>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2">
         <span class="text-xs font-semibold px-3 py-1 rounded-full
             {% if user.role == 'admin' %} bg-purple-50 text-purple-700
             {% elif user.role == 'koordynator' %} bg-blue-50 text-blue-700
             {% else %} bg-gray-100 text-gray-600 {% endif %}">
             {{ labels[user.role] }}
         </span>
-    </td>
-    <td class="p-3">
-        <div class="flex flex-wrap items-center justify-end gap-2">
-            <form hx-post="{{ url_for('admin.change_role', user_id=user.id) }}"
-                  hx-target="#user-row-{{ user.id }}" hx-swap="outerHTML"
-                  class="inline-flex items-center gap-2">
-                <select name="role" class="text-sm rounded-lg border border-gray-300 px-2 py-1">
-                    {% for r in roles %}
-                    <option value="{{ r }}" {% if r == user.role %}selected{% endif %}>{{ labels[r] }}</option>
-                    {% endfor %}
-                </select>
-                <button type="submit"
-                        class="text-xs font-semibold bg-parkrun-green text-white px-3 py-1.5 rounded-lg hover:bg-parkrun-dark transition">
-                    Zapisz
-                </button>
-            </form>
 
-            {% if user.id != current_user.id %}
-            <button hx-post="{{ url_for('admin.toggle_block_user', user_id=user.id) }}"
-                    hx-target="#user-row-{{ user.id }}" hx-swap="outerHTML"
-                    hx-confirm="{% if user.is_active %}Zablokować użytkownika {{ user.full_name }}? Nie będzie mógł się zalogować, dotychczasowe zgłoszenia zostaną bez zmian.{% else %}Odblokować użytkownika {{ user.full_name }}?{% endif %}"
-                    class="text-xs font-semibold px-3 py-1.5 rounded-lg transition
-                        {% if user.is_active %} bg-amber-50 text-amber-700 hover:bg-amber-100
-                        {% else %} bg-green-50 text-green-700 hover:bg-green-100 {% endif %}">
-                {% if user.is_active %}Zablokuj{% else %}Odblokuj{% endif %}
+        <form hx-post="{{ url_for('admin.change_role', user_id=user.id) }}"
+              hx-target="#user-row-{{ user.id }}" hx-swap="outerHTML"
+              class="inline-flex items-center gap-2">
+            <select name="role" class="text-sm rounded-lg border border-gray-300 px-2 py-1">
+                {% for r in roles %}
+                <option value="{{ r }}" {% if r == user.role %}selected{% endif %}>{{ labels[r] }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit"
+                    class="text-xs font-semibold bg-parkrun-green text-white px-3 py-1.5 rounded-lg hover:bg-parkrun-dark transition">
+                Zapisz
             </button>
+        </form>
 
-            <form method="post" action="{{ url_for('admin.delete_user', user_id=user.id) }}"
-                  onsubmit="return confirm('Usunąć konto {{ user.full_name }}? Tej operacji nie można cofnąć. Dotychczasowe zgłoszenia zostaną zachowane w historii, ale bez powiązania z kontem.');">
-                <button type="submit"
-                        class="text-xs font-semibold text-gray-400 hover:text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-50 transition">
-                    Usuń
-                </button>
-            </form>
-            {% endif %}
-        </div>
-    </td>
-</tr>
+        <button type="button"
+                hx-get="{{ url_for('admin.edit_user_form', user_id=user.id) }}"
+                hx-target="#user-row-{{ user.id }}" hx-swap="outerHTML"
+                class="text-xs font-semibold bg-white border border-gray-300 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition">
+            Edytuj
+        </button>
+
+        {% if user.id != current_user.id %}
+        <button hx-post="{{ url_for('admin.toggle_block_user', user_id=user.id) }}"
+                hx-target="#user-row-{{ user.id }}" hx-swap="outerHTML"
+                hx-confirm="{% if user.is_active %}Zablokować użytkownika {{ user.full_name }}? Nie będzie mógł się zalogować, dotychczasowe zgłoszenia zostaną bez zmian.{% else %}Odblokować użytkownika {{ user.full_name }}?{% endif %}"
+                class="text-xs font-semibold px-3 py-1.5 rounded-lg transition
+                    {% if user.is_active %} bg-amber-50 text-amber-700 hover:bg-amber-100
+                    {% else %} bg-green-50 text-green-700 hover:bg-green-100 {% endif %}">
+            {% if user.is_active %}Zablokuj{% else %}Odblokuj{% endif %}
+        </button>
+
+        <form method="post" action="{{ url_for('admin.delete_user', user_id=user.id) }}"
+              onsubmit="return confirm('Usunąć konto {{ user.full_name }}? Tej operacji nie można cofnąć. Dotychczasowe zgłoszenia zostaną zachowane w historii, ale bez powiązania z kontem.');">
+            <button type="submit"
+                    class="text-xs font-semibold text-gray-400 hover:text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-50 transition">
+                Usuń
+            </button>
+        </form>
+        {% endif %}
+    </div>
+</div>

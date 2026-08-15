@@ -1,0 +1,56 @@
+<div id="user-row-{{ user.id }}" class="p-4 bg-parkrun-light/40">
+    {% if error %}
+    <p class="text-xs text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1.5 mb-2">{{ error }}</p>
+    {% endif %}
+    <form hx-post="{{ url_for('admin.edit_user', user_id=user.id) }}"
+          hx-target="#user-row-{{ user.id }}" hx-swap="outerHTML"
+          class="space-y-2">
+        <div class="grid sm:grid-cols-2 gap-2">
+            <div>
+                <label class="block text-xs text-gray-500 mb-0.5">Imię</label>
+                <input type="text" name="first_name" required value="{{ form.get('first_name', user.first_name) }}"
+                       class="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm">
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-0.5">Nazwisko</label>
+                <input type="text" name="last_name" required value="{{ form.get('last_name', user.last_name) }}"
+                       class="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm">
+            </div>
+        </div>
+        <div class="grid sm:grid-cols-2 gap-2">
+            <div>
+                <label class="block text-xs text-gray-500 mb-0.5">E-mail</label>
+                <input type="email" name="email" required value="{{ form.get('email', user.email) }}"
+                       class="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm">
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-0.5">Kod parkrun</label>
+                <input type="text" name="parkrun_id" required pattern="^[Aa]\d{6,8}$" placeholder="np. A1234567"
+                       value="{{ form.get('parkrun_id', user.parkrun_id) }}"
+                       class="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm">
+            </div>
+        </div>
+        <div>
+            <label class="block text-xs text-gray-500 mb-0.5">Nowe hasło (ręczny reset - opcjonalnie)</label>
+            <input type="text" name="new_password" minlength="6" placeholder="zostaw puste, aby nie zmieniać hasła"
+                   value="{{ form.get('new_password', '') }}"
+                   class="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm font-mono">
+            <p class="text-xs text-gray-400 mt-0.5">
+                Wpisz nowe hasło (min. 6 znaków), jeśli użytkownik zapomniał hasła i trzeba je ustawić ręcznie -
+                przekaż mu je potem bezpiecznym kanałem (np. osobiście, telefonicznie). Puste pole = hasło bez zmian.
+            </p>
+        </div>
+        <div class="flex gap-2 pt-1">
+            <button type="submit"
+                    class="text-xs font-semibold bg-parkrun-green text-white px-3 py-1.5 rounded-lg hover:bg-parkrun-dark transition">
+                Zapisz
+            </button>
+            <button type="button"
+                    hx-get="{{ url_for('admin.user_row', user_id=user.id) }}"
+                    hx-target="#user-row-{{ user.id }}" hx-swap="outerHTML"
+                    class="text-xs font-semibold bg-gray-100 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-200 transition">
+                Anuluj
+            </button>
+        </div>
+    </form>
+</div>

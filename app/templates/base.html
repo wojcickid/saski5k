@@ -38,35 +38,47 @@
                 Wolontariat parkrun
             </a>
 
-            {% if current_user.is_authenticated %}
-            <div class="flex items-center gap-1 sm:gap-3 text-sm">
-                <a href="{{ url_for('main.calendar') }}" class="px-2 py-1 rounded hover:bg-parkrun-dark transition">Kalendarz</a>
-                <a href="{{ url_for('main.my_signups') }}" class="px-2 py-1 rounded hover:bg-parkrun-dark transition">Moje zgłoszenia</a>
-                {% if current_user.is_coordinator() %}
-                <a href="{{ url_for('coordinator.panel') }}" class="px-2 py-1 rounded hover:bg-parkrun-dark transition">Panel koordynatora</a>
-                {% endif %}
-                {% if current_user.is_admin() %}
-                <a href="{{ url_for('admin.users') }}" class="px-2 py-1 rounded hover:bg-parkrun-dark transition">Użytkownicy</a>
-                {% endif %}
-                <span class="hidden sm:inline text-parkrun-light">|</span>
-                <a href="{{ url_for('main.profile') }}" class="px-2 py-1 rounded hover:bg-parkrun-dark transition">{{ current_user.first_name }} (profil)</a>
-                <a href="{{ url_for('auth.logout') }}" class="px-2 py-1 rounded bg-parkrun-dark hover:bg-black/30 transition">Wyloguj</a>
+            {# Pełne poziome menu - tylko od szerokości lg (1024px) wzwyż, żeby nigdy się nie łamało #}
+            <div class="hidden lg:flex items-center gap-1 text-sm">
+                {% with variant = 'desktop' %}{% include "shared/_nav_links.html" %}{% endwith %}
             </div>
-            {% else %}
-            <div class="flex items-center gap-2 sm:gap-3 text-sm">
-                <a href="{{ url_for('main.calendar') }}" class="px-2 py-1 rounded hover:bg-parkrun-dark transition">Kalendarz</a>
-                <a href="{{ url_for('auth.login') }}"
-                   class="px-3 py-1.5 rounded-lg bg-white text-parkrun-green font-semibold hover:bg-parkrun-light transition">
-                    Zaloguj się
-                </a>
-                <a href="{{ url_for('auth.register') }}"
-                   class="hidden sm:inline px-3 py-1.5 rounded-lg border border-white/60 hover:bg-parkrun-dark transition">
-                    Załóż konto
-                </a>
-            </div>
-            {% endif %}
+
+            {# Przycisk burgera - tylko poniżej lg #}
+            <button type="button" id="nav-toggle" aria-label="Otwórz menu" aria-expanded="false" aria-controls="nav-mobile-menu"
+                    class="lg:hidden p-2 -mr-2 rounded hover:bg-parkrun-dark transition">
+                <svg id="nav-icon-open" xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+                <svg id="nav-icon-close" xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
         </nav>
+
+        {# Rozwijane menu mobilne - schowane domyślnie, przełączane skryptem poniżej #}
+        <div id="nav-mobile-menu" class="hidden lg:hidden border-t border-white/10 bg-parkrun-dark">
+            <div class="max-w-5xl mx-auto px-4 py-2 flex flex-col gap-1 text-sm">
+                {% with variant = 'mobile' %}{% include "shared/_nav_links.html" %}{% endwith %}
+            </div>
+        </div>
     </header>
+
+    <script>
+    (function () {
+        var toggle = document.getElementById('nav-toggle');
+        var menu = document.getElementById('nav-mobile-menu');
+        var iconOpen = document.getElementById('nav-icon-open');
+        var iconClose = document.getElementById('nav-icon-close');
+        if (!toggle || !menu) return;
+        toggle.addEventListener('click', function () {
+            var willOpen = menu.classList.contains('hidden');
+            menu.classList.toggle('hidden');
+            iconOpen.classList.toggle('hidden');
+            iconClose.classList.toggle('hidden');
+            toggle.setAttribute('aria-expanded', String(willOpen));
+        });
+    })();
+    </script>
 
     <main class="flex-1 w-full max-w-5xl mx-auto px-4 py-6">
         {% with messages = get_flashed_messages(with_categories=true) %}
